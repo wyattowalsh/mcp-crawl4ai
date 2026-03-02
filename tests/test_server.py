@@ -9,6 +9,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastmcp import Client
 from fastmcp.exceptions import ToolError
 
 from crawl4ai_mcp.server import (
@@ -18,6 +19,8 @@ from crawl4ai_mcp.server import (
     _select_content,
     _truncate,
     _validate_url,
+    main,
+    mcp,
 )
 
 # =========================================================================
@@ -615,7 +618,104 @@ class TestMain:
 
 
 # =========================================================================
-# 18. Smoke tests
+# 18. --setup flag tests
+# =========================================================================
+
+
+class TestSetupFlag:
+    """Tests for --setup CLI flag."""
+
+    def test_setup_flag_runs_setup(self, mocker):
+        """--setup flag runs crawl4ai-setup and exits."""
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value = mocker.Mock(returncode=0, stderr="")
+        mocker.patch("sys.argv", ["crawl4ai-mcp", "--setup"])
+
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 0
+        mock_run.assert_called_once_with(
+            ["crawl4ai-setup"],
+            capture_output=True,
+            text=True,
+        )
+
+    def test_setup_flag_failure(self, mocker):
+        """--setup flag reports failure."""
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value = mocker.Mock(returncode=1, stderr="Error")
+        mocker.patch("sys.argv", ["crawl4ai-mcp", "--setup"])
+
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 1
+
+
+# =========================================================================
+# 19. Browser auto-detection in crawler_lifespan
+# =========================================================================
+
+
+class TestBrowserAutoDetection:
+    """Tests for browser auto-install fallback in crawler_lifespan."""
+
+    async def test_auto_install_on_browser_error(self, mock_crawl_result):
+        """Lifespan retries crawler.start() after auto-installing browsers."""
+        mock_crawler = AsyncMock()
+        # First start() raises a Playwright error, second succeeds
+        mock_crawler.start = AsyncMock(
+            side_effect=[Exception("playwright chromium browser not found"), None]
+        )
+        mock_crawler.close = AsyncMock()
+        mock_crawler.arun = AsyncMock(return_value=mock_crawl_result)
+
+        with (
+            patch("crawl4ai_mcp.server.AsyncWebCrawler", return_value=mock_crawler),
+            patch("crawl4ai_mcp.server.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(returncode=0)
+            async with Client(mcp) as c:
+                # Verify the server started successfully (list tools works)
+                tools = await c.list_tools()
+                assert len(tools) > 0
+            mock_run.assert_called_once_with(
+                ["crawl4ai-setup"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+    async def test_auto_install_raises_on_non_browser_error(self):
+        """Lifespan re-raises non-browser errors without attempting setup."""
+        mock_crawler = AsyncMock()
+        mock_crawler.start = AsyncMock(side_effect=Exception("some other error"))
+        mock_crawler.close = AsyncMock()
+
+        with patch("crawl4ai_mcp.server.AsyncWebCrawler", return_value=mock_crawler):
+            with pytest.raises(Exception, match="some other error"):
+                async with Client(mcp):
+                    pass
+
+    async def test_auto_install_fails_raises_runtime_error(self):
+        """Lifespan raises RuntimeError when auto-setup itself fails."""
+        mock_crawler = AsyncMock()
+        mock_crawler.start = AsyncMock(side_effect=Exception("browser chromium not available"))
+        mock_crawler.close = AsyncMock()
+
+        with (
+            patch("crawl4ai_mcp.server.AsyncWebCrawler", return_value=mock_crawler),
+            patch(
+                "crawl4ai_mcp.server.subprocess.run",
+                side_effect=FileNotFoundError("crawl4ai-setup not found"),
+            ),
+        ):
+            with pytest.raises(RuntimeError, match="Playwright browsers not installed"):
+                async with Client(mcp):
+                    pass
+
+
+# =========================================================================
+# 20. Smoke tests
 # =========================================================================
 
 

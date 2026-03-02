@@ -13,6 +13,8 @@ import argparse
 import ipaddress
 import json
 import re
+import subprocess
+import sys
 from collections.abc import AsyncGenerator
 from typing import Annotated, Any, Literal
 from urllib.parse import urlparse
@@ -65,7 +67,27 @@ async def crawler_lifespan(server: Any) -> AsyncGenerator[dict[str, Any], None]:
         verbose=False,
     )
     crawler = AsyncWebCrawler(config=browser_config)
-    await crawler.start()
+    try:
+        await crawler.start()
+    except Exception as e:
+        error_msg = str(e).lower()
+        if "browser" in error_msg or "playwright" in error_msg or "chromium" in error_msg:
+            # Try auto-installing browsers
+            try:
+                subprocess.run(
+                    ["crawl4ai-setup"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                await crawler.start()  # retry after setup
+            except (subprocess.CalledProcessError, FileNotFoundError) as setup_err:
+                raise RuntimeError(
+                    "Playwright browsers not installed. Run: crawl4ai-setup\n"
+                    f"Auto-setup failed: {setup_err}"
+                ) from e
+        else:
+            raise
     try:
         yield {"crawler": crawler}
     finally:
@@ -924,7 +946,24 @@ def main() -> None:
     )
     parser.add_argument("--host", default="127.0.0.1", help="HTTP host")
     parser.add_argument("--port", type=int, default=8000, help="HTTP port")
+    parser.add_argument(
+        "--setup",
+        action="store_true",
+        help="Install Playwright browsers and exit.",
+    )
     args = parser.parse_args()
+
+    if args.setup:
+        result = subprocess.run(
+            ["crawl4ai-setup"],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            print("Browser setup complete.")  # noqa: T201 — OK for CLI mode, not MCP
+        else:
+            print(f"Setup failed: {result.stderr}", file=sys.stderr)  # noqa: T201
+        sys.exit(result.returncode)
 
     if args.transport == "http":
         mcp.run(transport="http", host=args.host, port=args.port)

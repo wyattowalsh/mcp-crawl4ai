@@ -1,9 +1,22 @@
 [project]
-name = "crawl4ai-mcp"
-version = "0.2.0"
+name = "mcp-crawl4ai"
+version = "0.3.0"
 description = "Model Context Protocol server for web crawling powered by Crawl4AI"
 readme = "README.md"
 requires-python = ">=3.13"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Wyatt Walsh" }]
+keywords = ["mcp", "crawl4ai", "web-crawling", "fastmcp", "model-context-protocol"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries",
+    "Typing :: Typed",
+]
 dependencies = [
     "fastmcp>=3.0.0",
     "crawl4ai>=0.8.0",
@@ -11,6 +24,13 @@ dependencies = [
 
 [project.scripts]
 crawl4ai-mcp = "crawl4ai_mcp.server:main"
+
+[project.urls]
+Homepage = "https://github.com/wyattowalsh/crawl4ai-mcp"
+Documentation = "https://wyattowalsh.github.io/crawl4ai-mcp/"
+Repository = "https://github.com/wyattowalsh/crawl4ai-mcp"
+Issues = "https://github.com/wyattowalsh/crawl4ai-mcp/issues"
+Changelog = "https://github.com/wyattowalsh/crawl4ai-mcp/blob/main/CHANGELOG.md"
 
 [build-system]
 requires = ["setuptools>=61.0"]

@@ -57,7 +57,9 @@ async def main() -> None:
         data = json.loads(result.content[0].text)
         print(f"crawl_many → {len(data)} results")
         for item in data:
-            print(f"  {item['url']}: success={item['success']}, content={len(item.get('content',''))} chars")
+            print(
+                f"  {item['url']}: success={item['success']}, content={len(item.get('content', ''))} chars"
+            )
         print()
 
         # ── take_screenshot ────────────────────────────────────────
