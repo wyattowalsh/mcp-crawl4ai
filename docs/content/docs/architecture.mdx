@@ -1,0 +1,166 @@
+---
+title: Architecture
+description: Deep dive into the architecture and design of Crawl4AI-MCP
+---
+
+import { Diagram } from '@/components';
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+# Architecture
+
+Crawl4AI-MCP uses a clean, single-module design built on FastMCP v3 and crawl4ai's AsyncWebCrawler. This page describes the system's components and how they interact.
+
+<Callout type="info">
+  The entire server is implemented in a single module (`server.py`) with no intermediate manager classes. FastMCP handles all protocol concerns; crawl4ai handles all crawling.
+</Callout>
+
+## System Overview
+
+<Diagram
+  definition={`
+graph TB
+    Client[MCP Client] --"MCP Request"--> FastMCP
+    FastMCP --"MCP Response"--> Client
+
+    subgraph "Crawl4AI MCP Server"
+        FastMCP[FastMCP v3 Server]
+        Lifespan[Lifespan Manager]
+        Tools[8 Tool Functions]
+        Resources[2 Resource Functions]
+        Crawler[AsyncWebCrawler]
+
+        FastMCP --> Tools
+        FastMCP --> Resources
+        Lifespan --> Crawler
+        Tools --> Crawler
+    end
+
+    subgraph "External"
+        Web[Web Pages]
+        Browser[Chromium Browser]
+    end
+
+    Crawler --> Browser
+    Browser --"HTTP / Rendering"--> Web
+  `}
+  caption="High-level architecture of Crawl4AI-MCP"
+/>
+
+## Key Components
+
+### FastMCP v3 Server
+
+The `FastMCP` instance handles all MCP protocol concerns:
+
+- Message parsing and validation
+- Tool and resource registration via decorators (`@mcp.tool()`, `@mcp.resource()`)
+- Transport management (stdio and HTTP)
+- Tool annotation metadata for MCP clients
+
+### Lifespan Manager
+
+The server uses FastMCP's `@lifespan` decorator to manage the `AsyncWebCrawler` singleton:
+
+```python
+@lifespan
+async def crawler_lifespan(server):
+    """Start a headless Chromium browser once; share it across all tool calls."""
+    browser_config = BrowserConfig(
+        headless=True,
+        browser_type="chromium",
+        verbose=False,
+    )
+    crawler = AsyncWebCrawler(config=browser_config)
+    await crawler.start()
+    try:
+        yield {"crawler": crawler}
+    finally:
+        await crawler.close()
+```
+
+This ensures:
+- The browser starts once at server initialization
+- All tool calls share the same browser instance via `ctx.lifespan_context["crawler"]`
+- The browser shuts down cleanly when the server exits
+
+### Tool Functions
+
+The server exposes 8 tools, each implemented as an `async` function decorated with `@mcp.tool()`:
+
+| Tool | Purpose |
+| :--- | :--- |
+| `crawl_url` | Single page content extraction |
+| `crawl_many` | Concurrent batch crawling (up to 20 URLs) |
+| `deep_crawl` | BFS recursive crawling with depth/page limits |
+| `extract_data` | CSS schema-based structured data extraction |
+| `take_screenshot` | Full-page PNG screenshot capture |
+| `get_links` | Internal/external link categorization |
+| `get_page_info` | Page metadata (title, description, counts) |
+| `execute_js` | JavaScript execution on rendered pages |
+
+Each tool accesses the shared crawler through the FastMCP context and delegates all crawling to crawl4ai's API.
+
+### Resource Functions
+
+Two resources provide server metadata:
+
+| Resource URI | Description |
+| :--- | :--- |
+| `config://server` | Server configuration, tool list, browser settings |
+| `crawl4ai://version` | Server, crawl4ai, and fastmcp version strings |
+
+## Data Flow
+
+<Diagram
+  definition={`
+sequenceDiagram
+    participant Client as MCP Client
+    participant Server as FastMCP Server
+    participant Tool as Tool Function
+    participant Crawler as AsyncWebCrawler
+    participant Browser as Chromium
+    participant Web as Web Page
+
+    Client->>Server: MCP tool call
+    Server->>Tool: Dispatch to tool function
+    Tool->>Tool: Validate URL
+    Tool->>Crawler: arun(url, config)
+    Crawler->>Browser: Navigate & render
+    Browser->>Web: HTTP request
+    Web-->>Browser: HTML response
+    Browser-->>Crawler: Rendered page
+    Crawler-->>Tool: CrawlResult
+    Tool->>Tool: Extract & truncate content
+    Tool-->>Server: Return string/JSON
+    Server-->>Client: MCP response
+  `}
+  caption="Data flow for a crawl_url request"
+/>
+
+## Technology Stack
+
+- **Python 3.13+**: Modern Python with latest language features
+- **FastMCP v3**: MCP protocol implementation, transport, and server framework
+- **crawl4ai**: AsyncWebCrawler with Playwright/Chromium for rendering
+- **Playwright**: Headless browser automation (managed by crawl4ai)
+
+## Deployment Options
+
+<Tabs items={['stdio (Local)', 'HTTP (Network)']}>
+  <Tab value="stdio (Local)">
+    Ideal for direct integration with MCP clients like Claude Desktop. The client spawns the server process and communicates over stdin/stdout.
+
+    ```bash
+    crawl4ai-mcp
+    ```
+  </Tab>
+
+  <Tab value="HTTP (Network)">
+    For network-based deployments where client and server run on different machines.
+
+    ```bash
+    crawl4ai-mcp --transport http --host 0.0.0.0 --port 8000
+    ```
+  </Tab>
+</Tabs>

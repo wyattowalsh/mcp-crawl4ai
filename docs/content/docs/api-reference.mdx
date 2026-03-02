@@ -1,0 +1,458 @@
+---
+title: API Reference
+description: Complete documentation for all Crawl4AI-MCP tools and resources
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# API Reference
+
+This page documents every MCP tool and resource exposed by Crawl4AI-MCP. All tools follow the [Model Context Protocol](https://modelcontextprotocol.ai/) specification and are compatible with any MCP client.
+
+<Callout type="info">
+  The server exposes **8 tools** and **2 resources**. Connect via stdio (default) or HTTP transport.
+</Callout>
+
+## Connecting to the Server
+
+| Transport | Command |
+| :--- | :--- |
+| **stdio** (default) | `crawl4ai-mcp` or `python -m crawl4ai_mcp.server` |
+| **HTTP** | `crawl4ai-mcp --transport http --host 127.0.0.1 --port 8000` |
+
+---
+
+## Tools
+
+### `crawl_url`
+
+**Title:** Crawl URL
+
+Crawl a single web page and extract its content. Use this tool when you need to read the content of a specific web page. Returns the page content in the requested format (markdown by default). For crawling multiple pages at once, use `crawl_many` instead. For recursive site crawling, use `deep_crawl`.
+
+#### Parameters
+
+| Name | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `url` | `string` | Yes | -- | The URL to crawl. Must be http or https. |
+| `output_format` | `string` | No | `"markdown"` | Output format: `"markdown"`, `"html"`, `"text"`, or `"cleaned_html"`. |
+| `css_selector` | `string \| null` | No | `null` | CSS selector to extract a specific page section. |
+| `word_count_threshold` | `integer` | No | `200` | Minimum word count threshold for content blocks (>= 0). |
+| `wait_for` | `string \| null` | No | `null` | CSS selector or JS expression to wait for before extraction. |
+| `bypass_cache` | `boolean` | No | `false` | Skip cached results and perform a fresh crawl. |
+
+#### Example Request
+
+```json
+{
+  "name": "crawl_url",
+  "parameters": {
+    "url": "https://example.com",
+    "output_format": "markdown",
+    "bypass_cache": true
+  }
+}
+```
+
+#### Example Response
+
+```text
+# Example Domain
+
+This domain is for use in illustrative examples in documents...
+```
+
+The response is a plain string containing the page content in the requested format. Content is truncated at 25,000 characters with a notice appended if exceeded.
+
+---
+
+### `crawl_many`
+
+**Title:** Crawl Multiple URLs
+
+Crawl multiple web pages concurrently and return their content. Accepts up to 20 URLs, crawls them all in parallel using the shared browser, and returns an array of results. Each result includes the URL, success status, and content (or error message). Use `crawl_url` for a single page or `deep_crawl` for recursive crawling.
+
+#### Parameters
+
+| Name | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `urls` | `array[string]` | Yes | -- | List of URLs to crawl. Minimum 1, maximum 20. |
+| `output_format` | `string` | No | `"markdown"` | Output format: `"markdown"`, `"html"`, `"text"`, or `"cleaned_html"`. |
+| `css_selector` | `string \| null` | No | `null` | CSS selector to extract a specific page section. |
+| `word_count_threshold` | `integer` | No | `200` | Minimum word count threshold for content blocks (>= 0). |
+| `bypass_cache` | `boolean` | No | `false` | Skip cached results and perform a fresh crawl. |
+
+#### Example Request
+
+```json
+{
+  "name": "crawl_many",
+  "parameters": {
+    "urls": [
+      "https://example.com",
+      "https://example.org"
+    ],
+    "output_format": "markdown"
+  }
+}
+```
+
+#### Example Response
+
+```json
+[
+  {
+    "url": "https://example.com",
+    "success": true,
+    "content": "# Example Domain\n\nThis domain is for use in illustrative examples..."
+  },
+  {
+    "url": "https://example.org",
+    "success": true,
+    "content": "# Example Domain\n\n..."
+  }
+]
+```
+
+Each item's content is truncated at 5,000 characters.
+
+---
+
+### `deep_crawl`
+
+**Title:** Deep Crawl
+
+Perform a breadth-first deep crawl starting from a seed URL. Discovers and follows links on each page up to `max_depth` levels, collecting up to `max_pages` total pages. Returns a JSON object with the seed URL, total pages crawled, and an array of per-page results each containing URL, depth, and content.
+
+#### Parameters
+
+| Name | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `url` | `string` | Yes | -- | The seed URL to start deep crawling from. |
+| `max_depth` | `integer` | No | `2` | Maximum crawl depth from seed URL (1--5). |
+| `max_pages` | `integer` | No | `10` | Maximum total pages to crawl (1--100). |
+| `include_external` | `boolean` | No | `false` | Follow links to external domains. |
+| `output_format` | `string` | No | `"markdown"` | Output format: `"markdown"`, `"html"`, `"text"`, or `"cleaned_html"`. |
+
+#### Example Request
+
+```json
+{
+  "name": "deep_crawl",
+  "parameters": {
+    "url": "https://example.com",
+    "max_depth": 2,
+    "max_pages": 5
+  }
+}
+```
+
+#### Example Response
+
+```json
+{
+  "seed_url": "https://example.com",
+  "pages_crawled": 3,
+  "results": [
+    {
+      "url": "https://example.com",
+      "depth": 0,
+      "content": "# Example Domain\n\n..."
+    },
+    {
+      "url": "https://example.com/about",
+      "depth": 1,
+      "content": "# About\n\n..."
+    }
+  ]
+}
+```
+
+---
+
+### `extract_data`
+
+**Title:** Extract Structured Data
+
+Extract structured data from a page using CSS selectors. Provide a schema defining the base selector for repeating items and the fields to extract. Returns the extracted data as a JSON array. Use this when you need tabular or list-like data from a page rather than raw text content.
+
+#### Parameters
+
+| Name | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `url` | `string` | Yes | -- | The URL to extract structured data from. |
+| `schema` | `object` | Yes | -- | CSS extraction schema with `name`, `baseSelector`, and `fields` array. Each field has `name`, `selector`, `type` (`"text"` or `"attribute"`), and optional `attribute`. |
+| `wait_for` | `string \| null` | No | `null` | CSS selector or JS expression to wait for before extraction. |
+
+#### Example Request
+
+```json
+{
+  "name": "extract_data",
+  "parameters": {
+    "url": "https://example.com/products",
+    "schema": {
+      "name": "Products",
+      "baseSelector": "div.product-card",
+      "fields": [
+        { "name": "title", "selector": "h2", "type": "text" },
+        { "name": "price", "selector": ".price", "type": "text" },
+        { "name": "image", "selector": "img", "type": "attribute", "attribute": "src" }
+      ]
+    }
+  }
+}
+```
+
+#### Example Response
+
+```json
+[
+  {
+    "title": "Widget A",
+    "price": "$19.99",
+    "image": "https://example.com/img/widget-a.jpg"
+  },
+  {
+    "title": "Widget B",
+    "price": "$29.99",
+    "image": "https://example.com/img/widget-b.jpg"
+  }
+]
+```
+
+---
+
+### `take_screenshot`
+
+**Title:** Take Screenshot
+
+Capture a full-page screenshot of a web page. Navigates to the URL, optionally waits for a selector, then captures a screenshot. Returns a JSON object with the URL, a base64-encoded PNG image, and the format indicator. Useful for visual verification or capturing rendered state of dynamic pages.
+
+#### Parameters
+
+| Name | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `url` | `string` | Yes | -- | The URL to screenshot. |
+| `wait_for` | `string \| null` | No | `null` | CSS selector or JS expression to wait for before capture. |
+
+#### Example Request
+
+```json
+{
+  "name": "take_screenshot",
+  "parameters": {
+    "url": "https://example.com"
+  }
+}
+```
+
+#### Example Response
+
+```json
+{
+  "url": "https://example.com",
+  "screenshot_base64": "iVBORw0KGgoAAAANSUhEUg...",
+  "format": "png"
+}
+```
+
+---
+
+### `get_links`
+
+**Title:** Get Links
+
+Extract and categorize all links found on a web page. Crawls the page and returns internal links (same domain) and external links (other domains) as separate arrays, along with totals for each category. Useful for site mapping, link analysis, or finding related pages before a deep crawl.
+
+#### Parameters
+
+| Name | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `url` | `string` | Yes | -- | The URL to extract links from. |
+
+#### Example Request
+
+```json
+{
+  "name": "get_links",
+  "parameters": {
+    "url": "https://example.com"
+  }
+}
+```
+
+#### Example Response
+
+```json
+{
+  "url": "https://example.com",
+  "internal_links": [
+    { "href": "https://example.com/about", "text": "About" }
+  ],
+  "external_links": [
+    { "href": "https://iana.org", "text": "IANA" }
+  ],
+  "total_internal": 1,
+  "total_external": 1
+}
+```
+
+---
+
+### `get_page_info`
+
+**Title:** Get Page Info
+
+Get metadata and summary information about a web page. Returns a lightweight overview including the page title, description, language, link and media counts, and the full metadata dict. Does not return the full page content -- use `crawl_url` for that. Useful for quickly inspecting a page before deciding to do a full crawl.
+
+#### Parameters
+
+| Name | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `url` | `string` | Yes | -- | The URL to inspect. |
+
+#### Example Request
+
+```json
+{
+  "name": "get_page_info",
+  "parameters": {
+    "url": "https://example.com"
+  }
+}
+```
+
+#### Example Response
+
+```json
+{
+  "url": "https://example.com",
+  "title": "Example Domain",
+  "description": "This domain is for use in illustrative examples.",
+  "language": "en",
+  "links_count": {
+    "internal": 0,
+    "external": 1
+  },
+  "media_count": {
+    "images": 0,
+    "videos": 0,
+    "audio": 0
+  },
+  "metadata": {
+    "title": "Example Domain",
+    "description": "This domain is for use in illustrative examples.",
+    "language": "en"
+  }
+}
+```
+
+---
+
+### `execute_js`
+
+**Title:** Execute JavaScript
+
+Load a web page and execute JavaScript on it, then return the content. Navigates to the URL, runs the provided JavaScript code, optionally waits for a condition, then extracts the resulting page content as markdown. Useful for interacting with dynamic pages -- clicking buttons, filling forms, or triggering client-side rendering before extraction.
+
+#### Parameters
+
+| Name | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `url` | `string` | Yes | -- | The URL to load before executing JavaScript. |
+| `js_code` | `string` | Yes | -- | JavaScript code to execute on the page after it loads. |
+| `wait_for` | `string \| null` | No | `null` | CSS selector or JS expression to wait for after JS execution. |
+
+#### Example Request
+
+```json
+{
+  "name": "execute_js",
+  "parameters": {
+    "url": "https://example.com",
+    "js_code": "document.querySelector('button.load-more').click()",
+    "wait_for": "div.extra-content"
+  }
+}
+```
+
+#### Example Response
+
+```text
+# Example Domain
+
+This domain is for use in illustrative examples...
+
+## Extra Content
+
+Additional content loaded after clicking the button...
+```
+
+The response is a plain string containing the page content as markdown after JS execution.
+
+---
+
+## Resources
+
+### `config://server`
+
+**MIME type:** `application/json`
+
+Returns the current server configuration and capabilities.
+
+#### Example Response
+
+```json
+{
+  "name": "crawl4ai",
+  "version": "0.2.0",
+  "tools": [
+    "crawl_url",
+    "crawl_many",
+    "deep_crawl",
+    "extract_data",
+    "take_screenshot",
+    "get_links",
+    "get_page_info",
+    "execute_js"
+  ],
+  "max_response_chars": 25000,
+  "browser_config": {
+    "headless": true,
+    "browser_type": "chromium"
+  }
+}
+```
+
+---
+
+### `crawl4ai://version`
+
+**MIME type:** `application/json`
+
+Returns server and dependency version information.
+
+#### Example Response
+
+```json
+{
+  "server_version": "0.2.0",
+  "crawl4ai_version": "0.8.0",
+  "fastmcp_version": "3.0.0"
+}
+```
+
+---
+
+## Error Handling
+
+Tool errors are raised as `ToolError` exceptions, which FastMCP translates into standard MCP error responses. Common error cases:
+
+| Condition | Error |
+| :--- | :--- |
+| Invalid URL (not http/https) | `"Invalid URL: '...'. Only http and https URLs are supported."` |
+| Crawl failure | `"Crawl failed for <url>: <message>"` |
+| No data extracted | `"No data extracted from <url>. Check your schema selectors."` |
+| No screenshot data | `"No screenshot data returned for <url>"` |
+| Server not initialized | `"Crawler not available -- server not fully initialized."` |

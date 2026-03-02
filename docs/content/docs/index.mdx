@@ -1,0 +1,245 @@
+---
+title: "Crawl4AI MCP Server"
+description: "High-performance web crawling for large language models using the Model Context Protocol"
+---
+
+import { Tabs, Tab } from 'nextra-theme-docs'
+import { Callout } from 'nextra/components'
+
+<div className="text-center mb-8">
+  <img src="/crawl4ai-mcp/img/logo.png" alt="Crawl4AI MCP Logo" className="mx-auto my-6" width="180px" />
+  <h1 className="text-4xl font-bold tracking-tight">Crawl4AI MCP</h1>
+  <p className="text-xl mt-4 text-gray-600 dark:text-gray-400">
+    High-performance web crawling for large language models using the Model Context Protocol
+  </p>
+</div>
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+
+<div className="card">
+  ### 🔌 Full MCP Compliance
+  Complete implementation of the MCP v1 server specification with multiple transport options (STDIO, HTTP/SSE)
+</div>
+
+<div className="card">
+  ### 🕸️ Advanced Crawling
+  Deep crawling, sitemap parsing, JavaScript rendering, and adaptive concurrency management
+</div>
+
+<div className="card">
+  ### 📊 LLM-Optimized Output
+  Clean Markdown, structured JSON, and text summaries designed for AI consumption
+</div>
+
+<div className="card">
+  ### 🚀 High Performance
+  Memory-adaptive concurrency, connection pooling, and efficient resource management
+</div>
+
+<div className="card">
+  ### 🏗️ Modern Python
+  Type-safe architecture with asyncio, Pydantic v2, modular design, and comprehensive testing
+</div>
+
+<div className="card">
+  ### 🤝 Ethical Crawling
+  Respects robots.txt, identifiable User-Agent, rate limiting, and caching
+</div>
+
+</div>
+
+## What is Crawl4AI MCP?
+
+Crawl4AI MCP is a **high-performance server implementation** that connects the [Model Context Protocol (MCP)](https://modelcontextprotocol.ai) with advanced web crawling capabilities. It enables large language models like Claude to interact with the live web, retrieving real-time information and structured content from websites.
+
+This server is designed to be:
+
+- **Fast and efficient** - Optimized for quick response times with adaptive concurrency
+- **Easy to integrate** - Compatible with any MCP client (Claude, Cursor, custom apps)
+- **Reliable** - Robust error handling and recovery, with detailed logging
+- **Flexible** - Multiple transport options, crawling configurations, and output formats
+- **Developer-friendly** - Clear API, comprehensive documentation, and easy extensibility
+- **Production-ready** - Scalable architecture suitable for individual and enterprise use
+
+## Installation
+
+Crawl4AI MCP can be installed in multiple ways to fit your needs.
+
+<Tabs items={['pip', 'Modern Python (uv)', 'Docker', 'Development']}>
+  <Tab>
+    ```bash
+    # Basic installation
+    pip install crawl4ai-mcp
+    
+    # With browser automation support (recommended)
+    pip install "crawl4ai-mcp[playwright]"
+    python -m playwright install --with-deps
+    
+    # With all features
+    pip install "crawl4ai-mcp[all]"
+    python -m playwright install --with-deps
+    ```
+  </Tab>
+  <Tab>
+    ```bash
+    # Install uv if you don't have it
+    # https://github.com/astral-sh/uv
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    
+    # Basic installation with UV
+    uv pip install crawl4ai-mcp
+    
+    # With browser automation support
+    uv pip install "crawl4ai-mcp[playwright]"
+    python -m playwright install --with-deps
+    
+    # With all features (significantly faster than pip)
+    uv pip install "crawl4ai-mcp[all]"
+    python -m playwright install --with-deps
+    ```
+  </Tab>
+  <Tab>
+    ```bash
+    # Pull and run the Docker image
+    docker pull ghcr.io/wyattowalsh/crawl4ai-mcp:latest
+    
+    # Run with default settings
+    docker run -p 8000:8000 ghcr.io/wyattowalsh/crawl4ai-mcp:latest
+    
+    # Run with custom configuration file
+    docker run -p 8000:8000 -v $(pwd)/config.yaml:/app/config.yaml \
+      ghcr.io/wyattowalsh/crawl4ai-mcp:latest --config /app/config.yaml
+    ```
+  </Tab>
+  <Tab>
+    ```bash
+    # Clone the repository
+    git clone https://github.com/wyattowalsh/crawl4ai-mcp.git
+    cd crawl4ai-mcp
+    
+    # Create a virtual environment (optional but recommended)
+    python -m venv venv
+    source venv/bin/activate  # On Windows: venv\Scripts\activate
+    
+    # Install in development mode
+    pip install -e .
+    
+    # For full development environment with all dependencies
+    pip install -e ".[dev,http,browser,llm]"
+    
+    # Alternative with modern UV installation (faster)
+    uv pip install -e ".[dev,http,browser,llm]"
+    ```
+  </Tab>
+</Tabs>
+
+<Callout type="info">
+  The optional dependency groups allow you to install only what you need:
+  - `[http]` - For HTTP/SSE transport support (FastAPI, uvicorn)
+  - `[browser]` - For browser-based crawling with JavaScript support (playwright)
+  - `[llm]` - For LLM-based extraction and summarization features
+  - `[dev]` - Development tools (pytest, mypy, ruff, etc.)
+  - `[all]` - All of the above
+</Callout>
+
+## Quick Start
+
+Once installed, you can start the server with the `crawl4ai-mcp` command:
+
+```bash
+# Option 1: Default - Start with STDIO transport
+# (Ideal for direct client integration like Claude Desktop)
+crawl4ai-mcp serve
+
+# Option 2: Start with HTTP/SSE transport on localhost port 8000
+# (Requires [http] extras: pip install crawl4ai-mcp[http])
+crawl4ai-mcp serve --transport http --host 127.0.0.1 --port 8000
+
+# Option 3: Start with a configuration file
+# (Overrides command-line args and defaults)
+crawl4ai-mcp serve --config my_config.yaml
+
+# Option 4: See all available options and help
+crawl4ai-mcp serve --help
+```
+
+### Connecting an MCP Client
+
+<Tabs items={['Claude Desktop', 'Python Script', 'Cursor IDE']}>
+  <Tab>
+    1. Open Claude Desktop
+    2. Go to Settings > MCP Servers
+    3. Add Crawl4AI-MCP:
+       - Name: Crawl4AI
+       - Transport: stdio or http
+       - Path: Path to installed crawl4ai-mcp, or HTTP URL
+       - Arguments: "serve" (for stdio) or empty (for HTTP)
+    4. Save and enable the server
+    5. In Claude, use the /tool command to access available tools
+  </Tab>
+  <Tab>
+    ```python
+    from fastmcp import MCPClient
+    
+    # Connect to the server
+    client = MCPClient("http://localhost:8000")  # For HTTP transport
+    
+    # List available tools
+    tools = client.list_tools()
+    print(f"Available tools: {[tool['name'] for tool in tools]}")
+    
+    # Call a tool
+    result = client.call_tool(
+        "crawl_url", 
+        {"url": "https://example.com", "format": "markdown"}
+    )
+    
+    # Print the result
+    print(result["content"][:500] + "...")  # Print first 500 chars
+    ```
+  </Tab>
+  <Tab>
+    1. Install Cursor AI IDE: https://cursor.sh/
+    2. Set up Crawl4AI-MCP:
+       - Start the server with HTTP transport
+       - In Cursor settings, add the Crawl4AI-MCP server URL
+    3. Access web content directly through AI assistance in your code
+  </Tab>
+</Tabs>
+
+## Architecture
+
+Crawl4AI-MCP is built with a modular, type-safe architecture emphasizing performance, reliability, and extensibility.
+
+### Core Components
+
+- **Server Layer**: Implements the MCP v1 specification with transport options (STDIO, HTTP/SSE)
+- **Core Engine**: High-performance asynchronous crawling with memory-adaptive concurrency
+- **CrawlerManager**: Central coordinator for all crawling operations with state management
+- **HttpClientManager**: Optimized, connection-pooled HTTP client with retry logic and stats
+- **Extraction Pipeline**: Processes raw web content into LLM-friendly formats
+- **Resource Manager**: Handles MCP resources with persistent storage and retrieval
+
+### Memory-Adaptive Concurrency
+
+The system automatically adjusts concurrency based on available system resources:
+
+```bash
+# Example configuration with memory-adaptive settings
+crawl4ai-mcp serve --max-memory-percent 75 --min-concurrent-requests 5 --max-concurrent-requests 25
+```
+
+### Modern Python Standards
+
+- **Type Safety**: Comprehensive typing with runtime validation via Pydantic v2
+- **Async-First**: Built on asyncio with proper concurrency patterns
+- **Testing**: Extensive pytest suite with property-based testing
+- **Documentation**: Google-style docstrings with complete type annotations
+- **Dependency Management**: Modern pyproject.toml with optional-dependencies
+
+## Next Steps
+
+- [See the PRD](/docs/prd) for detailed product requirements
+- [View contributing guidelines](/docs/contributing) to help improve the project
+- [Check out the GitHub repository](https://github.com/wyattowalsh/crawl4ai-mcp) for source code
+- [Report issues or suggest features](https://github.com/wyattowalsh/crawl4ai-mcp/issues)

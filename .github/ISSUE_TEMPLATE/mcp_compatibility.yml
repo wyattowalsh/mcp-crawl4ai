@@ -1,0 +1,191 @@
+name: 🧩 MCP Compatibility Issue
+description: Report issues with Model Context Protocol compatibility
+title: "[MCP] "
+labels: ["mcp", "compatibility", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <div align="center">
+        
+        # 🧩 MCP Compatibility Issue
+        
+        ![MCP Issue](https://img.shields.io/badge/Issue%20Type-MCP%20Compatibility-orange?style=for-the-badge)
+        
+        **Help us ensure Crawl4AI-MCP correctly implements the Model Context Protocol**
+        
+        </div>
+        
+        ---
+        
+        > **Important:** This template is for issues specifically related to MCP protocol implementation and compatibility.
+        > For general bugs, please use the Bug Report template.
+
+  - type: dropdown
+    id: compatibility_type
+    attributes:
+      label: 🔍 Compatibility Issue Type
+      description: What aspect of MCP compatibility is affected?
+      options:
+        - Protocol Message Structure
+        - Tool Implementation
+        - Resource URIs
+        - Transport Layer (STDIO, HTTP, WebSocket)
+        - Authentication
+        - Streaming/Notifications
+        - Error Handling
+        - Schema Validation
+        - Other (please specify)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 📝 Issue Description
+      description: Describe the compatibility issue in detail. How does the implementation differ from the MCP specification?
+      placeholder: |
+        Example: "The error response format for invalid parameters doesn't match the MCP specification. When providing an invalid URL to the `crawl_url` tool, the server returns a custom error format instead of the standard JSON-RPC error object with code -32602."
+    validations:
+      required: true
+
+  - type: textarea
+    id: mcp_spec_reference
+    attributes:
+      label: 📘 MCP Specification Reference
+      description: Reference the specific section of the MCP specification that relates to this issue.
+      placeholder: |
+        Example: "According to the MCP Specification section on 'Error Response Objects', all parameter validation errors should use error code -32602 (Invalid params) and include a data object describing the specific validation error."
+        
+        Link to relevant specification: https://modelcontextprotocol.io/#section-name
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 🔄 Steps to Reproduce
+      description: Provide clear steps to reproduce the compatibility issue.
+      placeholder: |
+        Example:
+        1. Start the MCP server with `crawl4ai-mcp serve --transport http`
+        2. Send the following request to the server at `http://localhost:8000/mcp/v1/tools`:
+        ```json
+        {
+          "id": "123",
+          "jsonrpc": "2.0",
+          "method": "call_tool",
+          "params": {
+            "name": "crawl_url",
+            "parameters": {
+              "url": "" // Empty URL to trigger validation error
+            }
+          }
+        }
+        ```
+        3. Observe the error response differs from MCP specification
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: ❌ Actual Behavior
+      description: What behavior are you currently observing?
+      placeholder: |
+        Example:
+        ```json
+        {
+          "id": "123",
+          "jsonrpc": "2.0",
+          "error": {
+            "message": "Invalid URL provided",
+            "code": -1001 // Custom error code
+          }
+        }
+        ```
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: ✅ Expected Behavior (per MCP spec)
+      description: What behavior do you expect according to the MCP specification?
+      placeholder: |
+        Example:
+        ```json
+        {
+          "id": "123",
+          "jsonrpc": "2.0",
+          "error": {
+            "code": -32602,
+            "message": "Invalid params",
+            "data": {
+              "issues": [
+                {
+                  "path": "parameters.url",
+                  "message": "URL cannot be empty"
+                }
+              ]
+            }
+          }
+        }
+        ```
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: 🔧 Proposed Solution
+      description: If you have suggestions on how to fix the compatibility issue, please share them.
+      placeholder: |
+        Example: "Update the error handling middleware to use standard MCP error codes. Specifically, modify the parameter validation to use error code -32602 and include structured data about the validation error in the response."
+      render: markdown
+
+  - type: textarea
+    id: client_impact
+    attributes:
+      label: 🔄 Impact on MCP Clients
+      description: How does this compatibility issue affect MCP clients interacting with Crawl4AI-MCP?
+      placeholder: |
+        Example: "Clients expecting standard MCP error codes may fail to properly handle errors from the server. This could result in confused error reporting, failure to retry operations appropriately, or inability to provide users with meaningful error messages."
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: 📎 Additional Context
+      description: Add any other context about the compatibility issue here.
+      render: markdown
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 🔍 Verification
+      description: Please check the following items
+      options:
+        - label: I have checked that this compatibility issue has not already been reported
+          required: true
+        - label: I have verified this against the latest MCP specification
+          required: true
+        - label: I am using the latest version of Crawl4AI-MCP
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        <div align="center">
+        
+        ### Thank you for helping improve MCP compatibility!
+        Accurate implementation of the protocol is essential for interoperability.
+        
+        </div> 

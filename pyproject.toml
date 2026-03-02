@@ -1,0 +1,61 @@
+[project]
+name = "crawl4ai-mcp"
+version = "0.2.0"
+description = "Model Context Protocol server for web crawling powered by Crawl4AI"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastmcp>=3.0.0",
+    "crawl4ai>=0.8.0",
+]
+
+[project.scripts]
+crawl4ai-mcp = "crawl4ai_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["crawl4ai_mcp"]
+package-data = {"crawl4ai_mcp" = ["py.typed"]}
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6",
+    "pytest-mock>=3.14",
+    "ruff>=0.15.4",
+    "ty>=0.0.19",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["crawl4ai_mcp"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+
+[tool.ruff]
+line-length = 100
+lint.select = ["E", "F", "W", "I", "B"]
+lint.ignore = ["E501"]
+
+[tool.ty.environment]
+python-version = "3.13"
+
+[tool.ty.rules]
+# crawl4ai>=0.8.0 has incomplete type stubs: arun() is typed to return
+# CrawlResultContainer|AsyncGenerator (streaming union) even for non-streaming
+# calls, and self-binding is mis-resolved on certain union variants. These
+# three rules exclusively surface as false positives from crawl4ai stubs.
+missing-argument = "ignore"
+unresolved-attribute = "ignore"
+not-iterable = "ignore"

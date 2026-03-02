@@ -1,0 +1,143 @@
+name: 📚 Documentation Request
+description: Suggest improvements to project documentation
+title: "[DOCS] "
+labels: ["documentation", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <div align="center">
+        
+        # 📚 Documentation Request
+        
+        ![Documentation Request](https://img.shields.io/badge/Request%20Type-Documentation-blue?style=for-the-badge)
+        
+        **Help us improve Crawl4AI-MCP documentation!**
+        
+        </div>
+        
+        ---
+        
+        > **Goal:** Identify documentation gaps or improvements to help users and contributors better understand Crawl4AI-MCP.
+
+  - type: dropdown
+    id: doc_type
+    attributes:
+      label: 📑 Documentation Type
+      description: What type of documentation needs improvement?
+      options:
+        - Installation/Setup Instructions
+        - API Reference/Tool Documentation
+        - MCP Protocol Implementation Guide
+        - Tutorials/Examples
+        - Architecture/Design Documentation
+        - Contributing Guidelines
+        - Configuration Documentation
+        - Security Considerations
+        - Deployment Guide
+        - Performance Tuning Guide
+        - Other (please specify)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: audience
+    attributes:
+      label: 👥 Target Audience
+      description: Who would benefit most from this documentation improvement?
+      options:
+        - New Users
+        - Developers Using Crawl4AI-MCP
+        - Contributors to Crawl4AI-MCP
+        - Advanced Users/Administrators
+        - AI/LLM Developers
+        - MCP Implementers
+        - All Users
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_state
+    attributes:
+      label: 🔍 Current Documentation State
+      description: Describe the current state of the documentation (missing, unclear, outdated, etc.).
+      placeholder: |
+        Example: "The crawler configuration options are mentioned in README.md but there's no complete list of options with descriptions and examples. Users currently have to look at the source code to understand all available options."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_improvement
+    attributes:
+      label: 🌟 Proposed Improvement
+      description: What specific documentation improvements would you like to see?
+      placeholder: |
+        Example: "Create a dedicated 'Configuration Reference' document that lists:
+        - All crawler configuration options
+        - Accepted values and defaults
+        - Example configurations for different use cases (high-throughput, respectful crawling, JavaScript support, etc.)
+        - Environment variable overrides
+        - Configuration file examples"
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: importance
+    attributes:
+      label: 🎯 Importance and Impact
+      description: Why is this documentation important? How will it help users/contributors?
+      placeholder: |
+        Example: "This documentation would help users properly configure the crawler for their specific needs without trial and error or digging into source code. It would reduce support questions and improve the overall user experience."
+    validations:
+      required: true
+
+  - type: textarea
+    id: example_content
+    attributes:
+      label: 📝 Example Content (Optional)
+      description: If you have specific content or examples to suggest, please share them here.
+      placeholder: |
+        Example:
+        
+        ```yaml
+        # Example Configuration
+        crawler:
+          timeout: 30  # Request timeout in seconds
+          max_depth: 3  # Maximum crawl depth for recursive crawling
+          respect_robots_txt: true  # Whether to respect robots.txt directives
+          # etc.
+        ```
+        
+        Or prose examples of how you would document certain features.
+      render: markdown
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: 📎 Additional Context
+      description: Add any other context, references, or resources that might be helpful.
+      render: markdown
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 🔍 Verification
+      description: Please check the following items
+      options:
+        - label: I have searched existing documentation thoroughly and confirmed this information is not already documented elsewhere
+          required: true
+        - label: I am willing to help contribute this documentation (optional but appreciated!)
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        <div align="center">
+        
+        ### Thank you for helping improve Crawl4AI-MCP documentation!
+        Clear, comprehensive documentation makes the project more accessible to everyone.
+        
+        </div> 

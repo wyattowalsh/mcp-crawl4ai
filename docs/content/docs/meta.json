@@ -1,0 +1,37 @@
+{
+  "index": {
+    "title": "Getting Started",
+    "icon": "home",
+    "sidebar_position": 1
+  },
+  "features": {
+    "title": "Key Features",
+    "icon": "layers",
+    "sidebar_position": 2
+  },
+  "architecture": {
+    "title": "Architecture",
+    "icon": "cpu",
+    "sidebar_position": 3
+  },
+  "api-reference": {
+    "title": "API Reference",
+    "icon": "code",
+    "sidebar_position": 4
+  },
+  "prd": {
+    "title": "Product Requirements Document",
+    "icon": "file-text",
+    "sidebar_position": 5
+  },
+  "roadmap": {
+    "title": "Project Roadmap",
+    "icon": "road",
+    "sidebar_position": 6
+  },
+  "contributing": {
+    "title": "Contributing Guide",
+    "icon": "git-pull-request",
+    "sidebar_position": 7
+  }
+} 

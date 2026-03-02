@@ -1,0 +1,160 @@
+name: ⚡ Performance Issue
+description: Report performance problems or optimization opportunities
+title: "[PERFORMANCE] "
+labels: ["performance", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <div align="center">
+        
+        # ⚡ Performance Issue
+        
+        ![Performance Issue](https://img.shields.io/badge/Issue%20Type-Performance-yellow?style=for-the-badge)
+        
+        **Help us make Crawl4AI-MCP faster and more efficient!**
+        
+        </div>
+        
+        ---
+        
+        > **Goal:** Identify performance bottlenecks or optimization opportunities in Crawl4AI-MCP.
+
+  - type: dropdown
+    id: perf_area
+    attributes:
+      label: 🔍 Performance Area
+      description: What specific area of performance is affected?
+      options:
+        - Startup Time
+        - Crawling Speed
+        - Memory Usage
+        - CPU Usage
+        - HTTP Response Time
+        - Concurrent Request Handling
+        - Connection Management
+        - Content Processing/Extraction
+        - Browser Rendering
+        - Resource Management
+        - MCP Protocol Handling
+        - Database/Storage
+        - Caching Efficiency
+        - Other (please specify)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 📝 Performance Issue Description
+      description: Describe the performance problem in detail.
+      placeholder: |
+        Example - "The deep_crawl tool with rendering enabled consumes excessive memory when crawling sites with many images. Memory usage increases by approximately 50MB per page crawled without being released after processing."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 🔄 Steps to Reproduce
+      description: Provide clear steps to reproduce the performance issue.
+      placeholder: |
+        Example:
+        1. Start the MCP server with `crawl4ai-mcp serve --transport http`
+        2. Make a POST request to `http://localhost:8000/mcp/v1/tools` with:
+        ```json
+        {
+          "id": "test1",
+          "jsonrpc": "2.0",
+          "method": "call_tool",
+          "params": {
+            "name": "deep_crawl",
+            "parameters": {
+              "url": "https://example.com/image-heavy-page",
+              "depth": 3,
+              "javascript_enabled": true
+            }
+          }
+        }
+        ```
+        3. Monitor memory usage with `top` or similar tool
+        4. Observe that memory usage increases by ~50MB per page and doesn't decrease
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: measurements
+    attributes:
+      label: 📊 Performance Measurements
+      description: Share specific measurements or metrics of the performance issue.
+      placeholder: |
+        Example:
+        
+        | Metric | Measurement | Context |
+        | ------ | ----------- | ------- |
+        | Memory usage | Increases by ~50MB per page | With 10 pages crawled, 500MB+ consumed |
+        | CPU usage | 85-95% sustained | On a 4-core Intel i7 @2.6GHz |
+        | Response time | 15-20 seconds | For a single page with JavaScript rendering |
+        
+        **Testing environment:**
+        - OS: Ubuntu 22.04 LTS
+        - CPU: Intel i7-10750H (6 cores)
+        - RAM: 16GB
+        - Python version: 3.14.1
+        - Browser engine: Chromium 125
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_performance
+    attributes:
+      label: ⚡ Expected Performance
+      description: What performance level would you consider acceptable?
+      placeholder: |
+        Example - "Memory usage should be bounded and not continue to grow with each page crawled. It should release resources after each page is processed, keeping overall memory usage below 200MB for the entire crawl operation regardless of the number of pages processed."
+    validations:
+      required: true
+
+  - type: textarea
+    id: optimization_ideas
+    attributes:
+      label: 💡 Optimization Ideas
+      description: If you have suggestions for improving performance, please share them.
+      placeholder: |
+        Example:
+        1. Explicit garbage collection after each page is processed
+        2. Browser context recycling rather than creating new ones
+        3. More aggressive image/resource blocking for the browser engine
+        4. Streaming processing to avoid keeping entire page content in memory
+      render: markdown
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: 🎯 Business/User Impact
+      description: How does this performance issue affect users or systems integrating with Crawl4AI-MCP?
+      placeholder: |
+        Example - "The high memory usage prevents running the server on small VMs with less than 4GB RAM. It also causes stability issues on longer crawling sessions, eventually leading to OOM errors. This limits the scalability of our application that uses Crawl4AI-MCP for data collection."
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: 📎 Additional Context
+      description: Add any other context about the performance issue here.
+      render: markdown
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        <div align="center">
+        
+        ### Thank you for helping improve Crawl4AI-MCP performance!
+        Performance optimizations benefit all users of the project.
+        
+        </div> 

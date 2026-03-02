@@ -1,0 +1,153 @@
+name: ✨ Feature Request
+description: Suggest an idea for crawl4ai-mcp
+title: "[FEATURE] "
+labels: ["enhancement", "triage"]
+assignees: ""
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <div align="center">
+
+        # ✨ Feature Request
+
+        ![Feature Request Banner](https://img.shields.io/badge/Request%20Type-Feature-brightgreen?style=for-the-badge)
+
+        **Thank you for contributing to the improvement of Crawl4AI-MCP!** <br/>
+        Your ideas help make this project better for everyone.
+
+        </div>
+
+        ---
+
+        > **Goal:** Share your vision for a new capability or improvement in Crawl4AI-MCP.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 🌟 Feature Description
+      description: A clear and concise description of the feature you're proposing. What should it do?
+      placeholder: |
+        Example: "Add support for configurable user-agent rotation to improve crawling resilience against basic bot detection."
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem-statement
+    attributes:
+      label: 🤔 Problem Statement / Use Case
+      description: What problem does this feature solve? Why is it needed? Who would benefit?
+      placeholder: |
+        Example: "Currently, using a single user-agent makes the crawler easily identifiable and potentially blocked by some websites. Users crawling diverse sites need better ways to mimic organic traffic."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: 🎯 Proposed Solution
+      description: Describe your proposed solution in detail. How should it work? Include potential API designs, configuration examples, or diagrams if applicable.
+      placeholder: |
+        Example: "Introduce a new configuration option `crawler.user_agent_strategy` with values like `fixed`, `random`, or `custom_list`. Apply the strategy to outgoing requests."
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: mcp-integration
+    attributes:
+      label: 🔄 MCP Integration Considerations (If Applicable)
+      description: If this feature impacts MCP tools, resources, or the protocol itself, explain how.
+      value: |
+        | Integration Aspect     | Details                                                                           |
+        | :--------------------- | :-------------------------------------------------------------------------------- |
+        | **Protocol Impact**    | <!-- e.g. New tool parameter, modification to existing tool, new resource type --> |
+        | **Client Interaction** | <!-- How would an MCP client utilize this feature? -->                             |
+      render: markdown
+
+  - type: textarea
+    id: user-experience
+    attributes:
+      label: 🧑‍💻 User / Developer Experience
+      description: How would users interact with this feature? Provide configuration or code examples.
+      placeholder: |
+        **Configuration (`config.yaml`):**
+        ```yaml
+        crawler:
+          user_agent_strategy: random
+        ```
+        **MCP Tool Call (Optional Override):**
+        ```python
+        requests.post(..., json={..., "parameters": {"user_agent": "MyAgent/1.0"}})
+        ```
+      render: markdown
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: ⚖️ Perceived Priority
+      description: Assess the importance and potential impact of this feature.
+      options:
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+  
+  - type: textarea
+    id: priority-justification
+    attributes:
+      label: ⚖️ Priority Justification
+      description: Explain the reasoning behind the chosen priority level.
+      placeholder: |
+        Example: "Priority: Medium - Improves robustness for certain use cases but isn't critical for basic functionality. Benefits users doing broad web crawling."
+
+  - type: textarea
+    id: alternatives-considered
+    attributes:
+      label: 🤔 Alternatives Considered
+      description: Describe any alternative solutions or approaches you thought about and why the proposed solution is preferred.
+      placeholder: |
+        **Example alternatives:**
+        1. External Proxy Service: Relies on users for complex setup.
+        2. Per-Request Randomization (No Config): Less user control.
+      render: markdown
+
+  - type: textarea
+    id: compatibility-concerns
+    attributes:
+      label: 🧩 Compatibility Concerns
+      description: Are there any backward compatibility issues? Would this break existing configurations or client integrations?
+      placeholder: |
+        Example: "This feature can be implemented to be fully backward compatible. If new config options are not set, it defaults to the current behavior."
+
+  - type: textarea
+    id: technical-feasibility
+    attributes:
+      label: 📊 Technical Feasibility
+      description: Provide insights on the implementation complexity. Are there known challenges or existing libraries that could help?
+      placeholder: |
+        **Example:** "Complexity: Low. Python's `random.choice` can be used. Requires modifying request header logic. Needs testing."
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 📎 Additional Context & Resources
+      description: Add any other relevant information, screenshots, links to related discussions, or external resources.
+      placeholder: |
+        **Related resources:**
+        - Issue #123
+        - Common User-Agent Strings: [link]
+      render: markdown
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        <div align="center">
+
+        ### Thank you for your feature proposal! 🙌
+        We appreciate your input in shaping the future of Crawl4AI-MCP.
+
+        </div> 

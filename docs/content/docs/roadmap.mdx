@@ -1,0 +1,81 @@
+---
+title: Project Roadmap
+description: Development timeline and future plans for Crawl4AI-MCP
+---
+
+import { Timeline } from '@/components';
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Project Roadmap
+
+<Callout type="info">
+  This roadmap outlines the development trajectory for Crawl4AI-MCP. Timelines and features may evolve based on community feedback and priorities.
+</Callout>
+
+Crawl4AI-MCP follows a structured development approach with clear milestones. Below is the current roadmap including completed milestones and planned future work.
+
+<Timeline
+  items={[
+    {
+      title: "Version 0.1.0 -- Initial Release",
+      description: "First public release with custom MCP SDK implementation",
+      date: "April 2025",
+      status: "completed",
+      features: [
+        "Basic MCP server with custom SDK implementation",
+        "crawl_url and deep_crawl tools",
+        "STDIO and HTTP/SSE transport support",
+        "Configuration via config.yaml",
+        "Initial documentation"
+      ]
+    },
+    {
+      title: "Version 0.2.0 -- FastMCP v3 Rewrite",
+      description: "Complete rewrite using FastMCP v3 and crawl4ai AsyncWebCrawler",
+      date: "March 2026",
+      status: "completed",
+      features: [
+        "Rewrote server with FastMCP v3",
+        "Lifespan-managed AsyncWebCrawler singleton",
+        "8 tools: crawl_url, crawl_many, deep_crawl, extract_data, take_screenshot, get_links, get_page_info, execute_js",
+        "2 resources: config://server, crawl4ai://version",
+        "Dependencies reduced from 30+ to 2 (fastmcp, crawl4ai)",
+        "Python 3.13+ requirement",
+        "Tool annotations for MCP clients"
+      ]
+    },
+    {
+      title: "Future Enhancements",
+      description: "Planned improvements and new capabilities",
+      date: "TBD",
+      status: "planned",
+      features: [
+        "LLM-based extraction strategy support",
+        "Expanded resource types",
+        "Advanced caching options",
+        "Additional deep crawl strategies beyond BFS",
+        "Plugin system for custom extraction and processing"
+      ]
+    }
+  ]}
+/>
+
+## Community Contributions
+
+Crawl4AI-MCP is an open-source project, and we welcome contributions from the community. Here are some ways you can contribute:
+
+- **Feature Development**: Implement new features or enhance existing ones
+- **Bug Fixes**: Help identify and fix bugs
+- **Documentation**: Improve documentation, add examples, and clarify usage
+- **Testing**: Write unit tests and integration tests
+- **Feedback**: Provide feedback on features, usability, and performance
+
+For more information on how to contribute, please see our [Contributing Guide](/docs/contributing).
+
+## Feature Requests
+
+We maintain a backlog of feature requests and ideas for future development. If you have a feature request, please open an issue on our [GitHub repository](https://github.com/wyattowalsh/crawl4ai-mcp/issues) with the "feature request" label.
+
+<Callout type="info">
+  Want to prioritize specific features or collaborate on development? Reach out to us on [GitHub](https://github.com/wyattowalsh/crawl4ai-mcp).
+</Callout>

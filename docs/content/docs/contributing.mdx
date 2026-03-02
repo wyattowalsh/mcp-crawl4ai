@@ -1,0 +1,145 @@
+---
+title: Contributing Guide
+description: Guidelines for contributing to the Crawl4AI-MCP project
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+# Contributing to Crawl4AI-MCP
+
+Thank you for your interest in contributing to Crawl4AI-MCP! This guide will help you get started with the development process and outline our contribution guidelines.
+
+<Callout type="info">
+  We welcome contributions of all sizes, from fixing typos in documentation to implementing new features.
+</Callout>
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.13+
+- [uv](https://docs.astral.sh/uv/) (recommended package manager)
+- Node.js 18+ (for documentation website)
+- Git
+
+### Setting Up the Development Environment
+
+<Tabs items={['MacOS/Linux', 'Windows']}>
+  <Tab value="MacOS/Linux">
+    ```bash
+    # Clone the repository
+    git clone https://github.com/wyattowalsh/crawl4ai-mcp.git
+    cd crawl4ai-mcp
+
+    # Install dependencies (including dev group)
+    uv sync --group dev
+
+    # Install Playwright browsers for crawl4ai
+    crawl4ai-setup
+    ```
+  </Tab>
+  <Tab value="Windows">
+    ```powershell
+    # Clone the repository
+    git clone https://github.com/wyattowalsh/crawl4ai-mcp.git
+    cd crawl4ai-mcp
+
+    # Install dependencies (including dev group)
+    uv sync --group dev
+
+    # Install Playwright browsers for crawl4ai
+    crawl4ai-setup
+    ```
+  </Tab>
+</Tabs>
+
+## Development Workflow
+
+### Branching Strategy
+
+We follow a simplified GitHub flow:
+
+1. Fork the repository (if you're an external contributor)
+2. Create a feature branch from `main`
+3. Make your changes
+4. Submit a pull request to `main`
+
+Branch naming convention: `<type>/<short-description>`
+- Types: `feature`, `bugfix`, `docs`, `refactor`, `test`, etc.
+
+Example: `feature/add-llm-extraction`
+
+### Code Style
+
+We use the following tools to maintain code quality:
+
+- **Ruff**: For linting and formatting (configured in `pyproject.toml`)
+- **MyPy**: For static type checking (strict mode)
+
+Run the linting and formatting tools:
+
+```bash
+# Lint
+uv run ruff check .
+
+# Format
+uv run ruff format .
+
+# Type check
+uv run mypy crawl4ai_mcp/
+```
+
+### Testing
+
+We use pytest for testing with asyncio support.
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run with coverage
+uv run pytest --cov=crawl4ai_mcp
+
+# Run specific tests
+uv run pytest tests/test_server.py
+```
+
+## Pull Request Process
+
+1. Ensure your code passes all tests and linting
+2. Update documentation if necessary
+3. Include a clear description of the changes in your PR
+4. Link to any related issues using keywords (e.g., "Fixes #123")
+5. Wait for review from maintainers
+
+<Callout type="warning">
+  Please do not include multiple unrelated changes in a single PR. Create separate PRs for unrelated features or fixes.
+</Callout>
+
+## Documentation
+
+If you're adding a new feature, please update the relevant documentation:
+
+1. Update or add appropriate MDX files in `docs/content/docs/`
+2. Update API reference if necessary in `docs/content/docs/api-reference.mdx`
+3. Consider adding examples if applicable
+
+To preview documentation changes locally:
+
+```bash
+cd docs
+pnpm install
+pnpm dev
+```
+
+Then visit `http://localhost:3000` to preview the changes.
+
+## Community Guidelines
+
+- Be respectful and inclusive
+- Focus on constructive feedback
+- Help others learn and grow
+- Give credit where it's due
+
+Thank you for contributing to Crawl4AI-MCP! Your help makes this project better for everyone.

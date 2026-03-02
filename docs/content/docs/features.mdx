@@ -1,0 +1,143 @@
+---
+title: Key Features
+description: Explore the powerful features of Crawl4AI-MCP for intelligent web crawling and data extraction
+---
+
+import { FeatureCard } from '@/components';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Globe, Cpu, Database, Code2, Search, Clock, Zap, Shield, BarChart3 } from 'lucide-react';
+
+# Key Features
+
+Crawl4AI-MCP offers a comprehensive set of features designed to simplify web crawling and data extraction for AI systems. This page highlights the key capabilities and how they can benefit your AI workflows.
+
+<Callout type="info">
+  All features are accessible through the Model Context Protocol (MCP), making them available to any MCP-compatible client such as Claude Desktop.
+</Callout>
+
+## Core Features
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+  <FeatureCard
+    title="Full MCP Protocol Support"
+    description="Complete implementation of the Model Context Protocol via FastMCP v3 with transport options (stdio, HTTP) for seamless integration with Claude and other AI systems."
+    icon={<Globe className="h-6 w-6" />}
+    href="/docs/api-reference"
+    gradient
+  />
+
+  <FeatureCard
+    title="Advanced Crawling Engine"
+    description="Single-page crawling, batch crawling, deep BFS crawling, JavaScript rendering, and structured data extraction powered by crawl4ai's AsyncWebCrawler."
+    icon={<Cpu className="h-6 w-6" />}
+    href="/docs/api-reference"
+  />
+
+  <FeatureCard
+    title="LLM-Optimized Output"
+    description="Clean Markdown, cleaned HTML, raw HTML, and plain text output formats designed specifically for AI consumption, with automatic content truncation."
+    icon={<Database className="h-6 w-6" />}
+    href="/docs/api-reference"
+    gradient
+  />
+
+  <FeatureCard
+    title="High Performance"
+    description="Lifespan-managed headless Chromium singleton with concurrent crawling support for fast, reliable operations across all tool calls."
+    icon={<Zap className="h-6 w-6" />}
+    href="/docs/architecture"
+  />
+</div>
+
+## Advanced Capabilities
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+  <FeatureCard
+    title="Minimal Dependencies"
+    description="Only 2 runtime dependencies (fastmcp, crawl4ai). Clean, single-module design with no intermediate manager classes or custom HTTP clients."
+    icon={<Code2 className="h-6 w-6" />}
+    href="/docs/architecture"
+    gradient
+  />
+
+  <FeatureCard
+    title="Tool Annotations"
+    description="All tools include MCP annotations (readOnlyHint, destructiveHint, idempotentHint, openWorldHint) so clients can reason about tool behavior."
+    icon={<Shield className="h-6 w-6" />}
+    href="/docs/api-reference"
+  />
+
+  <FeatureCard
+    title="Structured Data Extraction"
+    description="Extract specific data using CSS selector schemas with JsonCssExtractionStrategy for repeating items like product listings and tables."
+    icon={<Search className="h-6 w-6" />}
+    href="/docs/api-reference"
+    gradient
+  />
+
+  <FeatureCard
+    title="Integration Flexibility"
+    description="Works with any MCP client including Claude Desktop, Cursor IDE, or custom applications with minimal configuration."
+    icon={<BarChart3 className="h-6 w-6" />}
+    href="/docs/api-reference"
+  />
+</div>
+
+## Feature Details
+
+### Transport Options
+
+<Tabs items={['stdio', 'HTTP']}>
+  <Tab value="stdio">
+    **stdio transport** is ideal for direct integration with clients like Claude Desktop. It uses standard input/output streams for communication, making it efficient for co-located processes. This is the default transport.
+
+    ```bash
+    # Start the server with stdio transport (default)
+    crawl4ai-mcp
+    ```
+  </Tab>
+
+  <Tab value="HTTP">
+    **HTTP transport** allows for network-based communication. It is ideal for distributed setups where the client and server are on different machines.
+
+    ```bash
+    # Start the server with HTTP transport
+    crawl4ai-mcp --transport http --host 127.0.0.1 --port 8000
+    ```
+  </Tab>
+</Tabs>
+
+### Browser Automation
+
+Crawl4AI-MCP uses a headless Chromium browser managed as a lifespan singleton. The browser starts once when the server initializes and is reused across all tool calls, then shut down cleanly on server exit. This provides:
+
+- Full rendering of JavaScript-dependent sites
+- Interaction with dynamic content via `execute_js`
+- Waiting for elements to appear before extraction (`wait_for` parameter)
+- Full-page screenshot capture
+
+### Output Format Options
+
+The system supports multiple output formats to suit different needs:
+
+- **Markdown**: Clean, structured text ideal for LLM consumption (default)
+- **Cleaned HTML**: HTML with boilerplate removed
+- **HTML**: Preserved original HTML content
+- **Text**: Plain text extraction
+
+Each tool that returns page content accepts an `output_format` parameter to select the format.
+
+## Comparison with Alternatives
+
+Crawl4AI-MCP offers several advantages over alternative approaches:
+
+| Feature | Crawl4AI-MCP | Basic Web Scrapers | Browser Automation Only | API Services |
+|---------|--------------|-------------------|-------------------------|--------------|
+| MCP Protocol Support | Full | No | No | Partial |
+| JavaScript Rendering | Built-in | No | Yes | Varies |
+| Dependency Count | 2 | Varies | Many | Service-dependent |
+| Deployment Options | Multiple | Flexible | Limited | Service-dependent |
+| LLM-Optimized Output | Yes | No | No | Sometimes |
+| Structured Extraction | CSS schemas | Basic | Possible | Usually |
+| Cost | Free, open-source | Often free | Often free | Usually paid |
