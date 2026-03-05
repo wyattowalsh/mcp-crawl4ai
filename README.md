@@ -163,7 +163,7 @@ claude mcp add crawl4ai -- mcp-crawl4ai --transport stdio
 <summary><strong>MCP Inspector</strong></summary>
 
 ```bash
-npx @modelcontextprotocol/inspector mcp-crawl4ai
+npx @modelcontextprotocol/inspector uv --directory . run mcp-crawl4ai
 ```
 
 </details>

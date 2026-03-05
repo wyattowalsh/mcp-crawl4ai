@@ -946,13 +946,13 @@ The MCP Inspector can be run directly against the MCP-Crawl4AI server:
 
 ```bash
 # Run Inspector against a local MCP-Crawl4AI server
-npx @modelcontextprotocol/inspector node -m mcp_crawl4ai.server
+npx @modelcontextprotocol/inspector uv --directory . run mcp-crawl4ai
 
 # Pass environment variables to configure the server
-npx @modelcontextprotocol/inspector -e LOG_LEVEL=debug -e MAX_CONCURRENT_REQUESTS=5 node -m mcp_crawl4ai.server
+npx @modelcontextprotocol/inspector -e MCP_CRAWL4AI_DEFAULTS__CRAWL_MANY_DEFAULT_MAX_CONCURRENCY=5 uv --directory . run mcp-crawl4ai
 
 # Use custom ports for Inspector client UI and proxy server
-CLIENT_PORT=8080 SERVER_PORT=9000 npx @modelcontextprotocol/inspector node -m mcp_crawl4ai.server
+CLIENT_PORT=8080 SERVER_PORT=9000 npx @modelcontextprotocol/inspector uv --directory . run mcp-crawl4ai
 ```
 
 The Inspector runs both a client UI (default port 5173) and an MCP proxy server (default port 3000). Open the client UI in your browser to interact with the MCP-Crawl4AI server through a visual interface.

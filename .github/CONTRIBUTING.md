@@ -228,10 +228,10 @@ The MCP Inspector is a visual testing and debugging tool for MCP servers. We hig
 
 ```bash
 # Run Inspector against your local development server
-npx @modelcontextprotocol/inspector python -m mcp_crawl4ai.server
+npx @modelcontextprotocol/inspector uv --directory . run mcp-crawl4ai
 
 # With environment variables for testing configuration
-npx @modelcontextprotocol/inspector -e LOG_LEVEL=debug python -m mcp_crawl4ai.server
+npx @modelcontextprotocol/inspector -e MCP_CRAWL4AI_DEFAULTS__MAX_RESPONSE_CHARS=10000 uv --directory . run mcp-crawl4ai
 ```
 
 MCP Inspector provides:
