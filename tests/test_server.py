@@ -402,7 +402,9 @@ class TestCrawl:
                 "crawl",
                 {
                     "targets": "https://example.com",
-                    "options": {"traversal": {"mode": "deep", "dispatcher": {"max_concurrency": 1}}},
+                    "options": {
+                        "traversal": {"mode": "deep", "dispatcher": {"max_concurrency": 1}}
+                    },
                 },
             )
 
@@ -497,7 +499,9 @@ class TestSessionAndArtifacts:
     async def test_close_session_is_idempotent_on_missing_or_close_errors(self, client):
         c, mock_crawler = client
         mock_crawler.crawler_strategy = MagicMock()
-        mock_crawler.crawler_strategy.kill_session = AsyncMock(side_effect=RuntimeError("already gone"))
+        mock_crawler.crawler_strategy.kill_session = AsyncMock(
+            side_effect=RuntimeError("already gone")
+        )
 
         await c.call_tool(
             "scrape",
@@ -516,7 +520,10 @@ class TestSessionAndArtifacts:
         second_close_text = (
             second_close.content[0].text if hasattr(second_close, "content") else str(second_close)
         )
-        assert json.loads(second_close_text) == {"session_id": "idempotent-session", "closed": False}
+        assert json.loads(second_close_text) == {
+            "session_id": "idempotent-session",
+            "closed": False,
+        }
 
     async def test_capture_and_retrieve_artifacts_with_redaction(
         self,
@@ -555,7 +562,9 @@ class TestSessionAndArtifacts:
         assert run["session_id"] == "artifact-session"
         artifacts = run["artifacts"]
         assert {item["artifact_type"] for item in artifacts} == {"mhtml", "console", "network"}
-        network_artifact_id = next(item["artifact_id"] for item in artifacts if item["artifact_type"] == "network")
+        network_artifact_id = next(
+            item["artifact_id"] for item in artifacts if item["artifact_type"] == "network"
+        )
         assert not network_artifact_id.startswith("artifact-")
 
         with_content_result = await c.call_tool(

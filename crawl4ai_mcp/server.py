@@ -1268,9 +1268,7 @@ async def _cleanup_expired_sessions(
     session_ttl_seconds: int | None = None,
 ) -> list[str]:
     """Close and forget sessions whose TTL has expired."""
-    ttl_seconds = (
-        _get_session_ttl_seconds() if session_ttl_seconds is None else session_ttl_seconds
-    )
+    ttl_seconds = _get_session_ttl_seconds() if session_ttl_seconds is None else session_ttl_seconds
     expired_session_ids: list[str] = []
     for existing_session_id, state in session_registry.items():
         last_used_at = state.get("last_used_at")
@@ -2086,7 +2084,9 @@ async def scrape(
             "Invalid options.extraction.extraction_mode: requires options.extraction.schema."
         )
     extraction_mode = (
-        extraction_options.extraction_mode if extraction_options.extraction_mode is not None else "css"
+        extraction_options.extraction_mode
+        if extraction_options.extraction_mode is not None
+        else "css"
     )
     extraction_strategy = (
         _build_extraction_strategy(extraction_schema, extraction_mode)
@@ -2138,9 +2138,7 @@ async def scrape(
         session_id=normalized_session_id,
         extraction_strategy=extraction_strategy,
         js_code=(
-            [transformation_options.js_code]
-            if transformation_options.js_code is not None
-            else None
+            [transformation_options.js_code] if transformation_options.js_code is not None else None
         ),
     )
     if render_options.viewport_width is not None:
@@ -2188,7 +2186,9 @@ async def scrape(
                     item["ok"] = False
                     item["error"] = "No data extracted. Check options.extraction.schema selectors."
                 else:
-                    truncate_limit = None if len(normalized_targets) == 1 else _get_batch_item_chars()
+                    truncate_limit = (
+                        None if len(normalized_targets) == 1 else _get_batch_item_chars()
+                    )
                     item["data"] = _truncate(str(extracted_content), truncate_limit)
             else:
                 selected_content = _select_content(result, output_format)
@@ -2362,7 +2362,9 @@ async def crawl(
             "Invalid options.extraction.extraction_mode: requires options.extraction.schema."
         )
     extraction_mode = (
-        extraction_options.extraction_mode if extraction_options.extraction_mode is not None else "css"
+        extraction_options.extraction_mode
+        if extraction_options.extraction_mode is not None
+        else "css"
     )
     extraction_strategy = (
         _build_extraction_strategy(extraction_schema, extraction_mode)
@@ -2407,7 +2409,9 @@ async def crawl(
         if extraction_options.word_count_threshold is not None
         else 200
     )
-    js_code = [transformation_options.js_code] if transformation_options.js_code is not None else None
+    js_code = (
+        [transformation_options.js_code] if transformation_options.js_code is not None else None
+    )
 
     config = _build_run_config(
         css_selector=extraction_options.css_selector,
@@ -2472,7 +2476,9 @@ async def crawl(
             config=deep_config,
             **runtime_controls,  # ty: ignore[invalid-argument-type]
         )
-        results = list(cast(Any, deep_results)) if isinstance(deep_results, list) else [deep_results]
+        results = (
+            list(cast(Any, deep_results)) if isinstance(deep_results, list) else [deep_results]
+        )
         requested_targets = [normalized_targets[0] for _ in results]
 
     items: list[dict[str, Any]] = []
@@ -2490,13 +2496,17 @@ async def crawl(
             result_depth = getattr(result, "depth", None)
             item["depth"] = (
                 result_depth
-                if isinstance(result_depth, int) and not isinstance(result_depth, bool) and result_depth >= 0
+                if isinstance(result_depth, int)
+                and not isinstance(result_depth, bool)
+                and result_depth >= 0
                 else 0
             )
 
         if item["ok"]:
             truncate_limit = (
-                None if traversal_mode == "list" and len(normalized_targets) == 1 else _get_batch_item_chars()
+                None
+                if traversal_mode == "list" and len(normalized_targets) == 1
+                else _get_batch_item_chars()
             )
             if extraction_schema is not None:
                 extracted_content = getattr(result, "extracted_content", None)
@@ -3989,10 +3999,7 @@ def summarize_page(
     return [
         Message(
             role="user",
-            content=(
-                "Use the scrape tool with targets set to "
-                f"{url}, then summarize its {focus}."
-            ),
+            content=(f"Use the scrape tool with targets set to {url}, then summarize its {focus}."),
         )
     ]
 

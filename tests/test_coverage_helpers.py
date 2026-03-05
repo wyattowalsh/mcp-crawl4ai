@@ -202,7 +202,12 @@ def test_artifact_store_prune_and_retention_helpers() -> None:
 
     store2 = _artifact_store()
     store2["artifacts"] = {
-        "artifact-a": {"artifact_id": "artifact-a", "session_id": "s2", "run_id": "run-2", "size_bytes": 1}
+        "artifact-a": {
+            "artifact_id": "artifact-a",
+            "session_id": "s2",
+            "run_id": "run-2",
+            "size_bytes": 1,
+        }
     }
     store2["artifact_order"] = ["artifact-a"]
     store2["session_artifacts"] = {"s2": ["artifact-a"]}
@@ -320,9 +325,9 @@ def test_deep_crawl_filter_validation_and_target_normalization() -> None:
         )
     with pytest.raises(ToolError, match="Invalid url_filters.include\\[0\\]"):
         _validate_deep_crawl_url_filter_patterns(["a\nb"], param_name="url_filters.include")
-    assert _validate_deep_crawl_url_filter_patterns([" /docs/* "], param_name="url_filters.include") == [
-        "/docs/*"
-    ]
+    assert _validate_deep_crawl_url_filter_patterns(
+        [" /docs/* "], param_name="url_filters.include"
+    ) == ["/docs/*"]
 
     with pytest.raises(ToolError, match="Invalid crawl_mode"):
         _build_deep_crawl_strategy(
@@ -364,13 +369,13 @@ async def test_get_artifact_error_paths() -> None:
             "session_id": "different-session",
             "run_id": "run-1",
             "size_bytes": 1,
-                "content_type": "text/plain",
-                "encoding": "utf-8",
-                "created_at": 1,
-                "expires_at": 9_999_999_999,
-                "content": "x",
-            }
+            "content_type": "text/plain",
+            "encoding": "utf-8",
+            "created_at": 1,
+            "expires_at": 9_999_999_999,
+            "content": "x",
         }
+    }
     owner_ctx = types.SimpleNamespace(lifespan_context={"artifacts": wrong_owner_store})
     with pytest.raises(ToolError, match="Artifact not found or expired"):
         await get_artifact("sess-1", "artifact-00000001", ctx=owner_ctx)
