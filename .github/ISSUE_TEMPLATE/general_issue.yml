@@ -78,9 +78,9 @@ body:
         | :------------------- | :------------------------------------- |
         | OS                   | <!-- e.g., macOS 14.5, Ubuntu 22.04 --> |
         | Python Version       | <!-- e.g., 3.14.0 -->                  |
-        | crawl4ai-mcp Version | <!-- e.g., 0.2.1 -->                   |
+        | crawl4ai-mcp Version | <!-- e.g., 0.3.0 -->                   |
         | Installation Method  | <!-- e.g., pip, source, Docker -->      |
-        | MCP Transport        | <!-- e.g., STDIO, HTTP/SSE, WS -->      |
+        | MCP Transport        | <!-- e.g., STDIO, HTTP -->               |
         | Browser (if used)    | <!-- e.g., Chromium 125 -->           |
         | Client Application   | <!-- e.g., Claude Desktop -->         |
       render: markdown
@@ -121,10 +121,10 @@ body:
   - type: checkboxes
     id: terms
     attributes:
-      label: 📜 Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/wyattowalsh/crawl4ai-mcp/blob/main/CODE_OF_CONDUCT.md).
+      label: 📜 Community Guidelines
+      description: By submitting this issue, you agree to follow our [Contribution Guidelines](https://github.com/wyattowalsh/crawl4ai-mcp/blob/main/.github/CONTRIBUTING.md).
       options:
-        - label: I agree to follow this project's Code of Conduct.
+        - label: I agree to follow this project's contribution and community guidelines.
           required: true
   - type: markdown
     attributes:

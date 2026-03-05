@@ -10,10 +10,12 @@ WORKDIR /app
 
 # Copy dependency specs first for layer caching
 COPY pyproject.toml uv.lock ./
-RUN uv sync --no-dev --frozen
+RUN uv sync --no-dev --frozen --no-install-project
 
-# Copy source
+# Copy source and package metadata required by pyproject
 COPY crawl4ai_mcp/ ./crawl4ai_mcp/
+COPY README.md LICENSE ./
+RUN uv sync --no-dev --frozen
 
 # Install Playwright browsers (required by crawl4ai)
 RUN uv run crawl4ai-setup
@@ -35,7 +37,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 COPY --from=builder /app /app
-COPY --from=builder /root/.local /root/.local
 # Playwright browser binaries live in ~/.cache/ms-playwright by default
 COPY --from=builder /root/.cache /root/.cache
 

@@ -73,7 +73,7 @@ List any relevant details for your testing configuration (OS, Python version, et
     1.  <!-- Step 1 -->
     2.  <!-- Step 2 -->
 *   **Test Environment:** <!-- e.g., macOS Sonoma 14.5, Python 3.14.0 -->
-*   **MCP Transport Tested:** <!-- e.g., HTTP/SSE, WebSocket, STDIO -->
+*   **MCP Transport Tested:** <!-- e.g., HTTP, STDIO -->
 *   **Browsers Tested (if applicable):** <!-- e.g., Chromium 125, Firefox 126 -->
 *   **Specific Scenarios Covered:** <!-- e.g., Handling of large pages, timeout conditions, specific website structures -->
 

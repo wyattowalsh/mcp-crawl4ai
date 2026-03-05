@@ -19,15 +19,12 @@ uv run python tests/manual/test_live.py
 
 | Component | Test |
 |-----------|------|
-| `crawl_url` | Crawl example.com, verify markdown output |
-| `crawl_many` | Batch crawl 2 URLs |
-| `get_page_info` | Metadata extraction |
-| `get_links` | Link categorization |
-| `take_screenshot` | Base64 PNG capture |
+| `scrape` | Single-target canonical envelope crawl |
+| `crawl` | Multi-target list traversal envelope |
 | `config://server` | Server config resource |
 | `crawl4ai://version` | Version resource |
 | `summarize_page` | Prompt template |
 
 ## Expected
 
-All tools respond without errors and return non-empty content.
+All calls return without errors and produce non-empty outputs.

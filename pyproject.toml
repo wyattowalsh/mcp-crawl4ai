@@ -1,6 +1,6 @@
 [project]
 name = "mcp-crawl4ai"
-version = "0.3.0"
+version = "0.3.1"
 description = "Model Context Protocol server for web crawling powered by Crawl4AI"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -20,6 +20,7 @@ classifiers = [
 dependencies = [
     "fastmcp>=3.0.0",
     "crawl4ai>=0.8.0",
+    "pydantic-settings>=2.0",
 ]
 
 [project.scripts]
@@ -55,8 +56,10 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 markers = [
+    "unit: Isolated unit tests for helpers and validation logic",
     "smoke: Quick startup and discovery tests",
-    "integration: Tests requiring external services (browser, network)",
+    "e2e: End-to-end workflow tests across MCP surface",
+    "integration: In-memory integration tests using mocked crawler/services",
 ]
 
 [tool.coverage.run]

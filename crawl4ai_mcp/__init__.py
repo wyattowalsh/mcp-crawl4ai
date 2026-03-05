@@ -5,13 +5,14 @@ from typing import Any, Literal, TypedDict
 
 SCRAPE_CRAWL_CONTRACT_SCHEMA_VERSION = "scrape-crawl.v1"
 SCRAPE_CRAWL_ENVELOPE_FIELDS = (
+    "schema_version",
+    "tool",
     "ok",
-    "operation",
     "data",
-    "error",
-    "diagnostics",
-    "session",
+    "items",
     "meta",
+    "warnings",
+    "error",
 )
 SCRAPE_CRAWL_OPTION_GROUPS: dict[str, tuple[str, ...]] = {
     "extraction": (
@@ -19,27 +20,15 @@ SCRAPE_CRAWL_OPTION_GROUPS: dict[str, tuple[str, ...]] = {
         "word_count_threshold",
         "schema",
         "extraction_mode",
-        "url_filters",
     ),
     "transformation": ("js_code",),
     "conversion": (
         "output_format",
         "capture_artifacts",
-        "viewport_width",
-        "viewport_height",
     ),
     "runtime": (
         "wait_for",
         "bypass_cache",
-        "max_depth",
-        "max_pages",
-        "crawl_mode",
-        "include_external",
-        "max_concurrency",
-        "rate_limit_base_delay",
-        "rate_limit_max_delay",
-        "rate_limit_max_retries",
-        "dispatcher",
         "timeout_ms",
         "max_retries",
         "retry_backoff_ms",
@@ -55,16 +44,27 @@ SCRAPE_CRAWL_OPTION_GROUPS: dict[str, tuple[str, ...]] = {
         "artifact_max_total",
         "artifact_max_total_bytes",
     ),
+    "render": (
+        "viewport_width",
+        "viewport_height",
+    ),
+    "traversal": (
+        "mode",
+        "max_depth",
+        "max_pages",
+        "crawl_mode",
+        "include_external",
+        "url_filters",
+        "max_concurrency",
+        "rate_limit_base_delay",
+        "rate_limit_max_delay",
+        "rate_limit_max_retries",
+        "dispatcher",
+    ),
 }
 SCRAPE_CRAWL_MIGRATION_MAP: dict[str, str] = {
-    "crawl_url": "scrape",
-    "extract_data": "scrape",
-    "take_screenshot": "scrape",
-    "get_links": "scrape",
-    "get_page_info": "scrape",
-    "execute_js": "scrape",
-    "crawl_many": "crawl",
-    "deep_crawl": "crawl",
+    "scrape": "scrape",
+    "crawl": "crawl",
     "close_session": "session.close",
     "get_artifact": "session.artifact.get",
 }
@@ -77,6 +77,8 @@ ScrapeCrawlOptionGroup = Literal[
     "runtime",
     "diagnostics",
     "session",
+    "render",
+    "traversal",
 ]
 
 
@@ -86,20 +88,25 @@ class ScrapeCrawlError(TypedDict):
 
 
 class ScrapeCrawlEnvelopeMeta(TypedDict):
-    schema_version: str
-    operation: ScrapeCrawlOperation
-    legacy_tool: str | None
+    target_count: int
     option_groups: list[ScrapeCrawlOptionGroup]
+    output_format: str
+    diagnostics: bool
+    session_id: str | None
+    extraction_mode: str | None
+    traversal_mode: str | None
 
 
 class ScrapeCrawlEnvelope(TypedDict):
+    schema_version: str
+    tool: str
     ok: bool
-    operation: ScrapeCrawlOperation
     data: Any | None
-    error: ScrapeCrawlError | None
-    diagnostics: dict[str, Any] | None
-    session: dict[str, Any] | None
+    items: list[Any] | None
     meta: ScrapeCrawlEnvelopeMeta
+    warnings: list[str]
+    error: ScrapeCrawlError | None
+
 
 try:
     __version__ = version("mcp-crawl4ai")

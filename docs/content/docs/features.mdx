@@ -29,7 +29,7 @@ Crawl4AI-MCP offers a comprehensive set of features designed to simplify web cra
 
   <FeatureCard
     title="Advanced Crawling Engine"
-    description="Single-page crawling, batch crawling, deep BFS crawling, JavaScript rendering, and structured data extraction powered by crawl4ai's AsyncWebCrawler."
+    description="Canonical scrape/crawl contracts covering single-page, batch, deep traversal, extraction, rendering, diagnostics, and artifact capture powered by crawl4ai's AsyncWebCrawler."
     icon={<Cpu className="h-6 w-6" />}
     href="/docs/api-reference"
   />
@@ -113,9 +113,9 @@ Crawl4AI-MCP offers a comprehensive set of features designed to simplify web cra
 Crawl4AI-MCP uses a headless Chromium browser managed as a lifespan singleton. The browser starts once when the server initializes and is reused across all tool calls, then shut down cleanly on server exit. This provides:
 
 - Full rendering of JavaScript-dependent sites
-- Interaction with dynamic content via `execute_js`
-- Waiting for elements to appear before extraction (`wait_for` parameter)
-- Full-page screenshot capture
+- Dynamic-content handling via canonical transformation/runtime options
+- Waiting for elements before extraction (`runtime.wait_for`)
+- Optional run artifact capture (`conversion.capture_artifacts`)
 
 ### Output Format Options
 

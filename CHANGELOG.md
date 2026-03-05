@@ -11,8 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Contract lock constants for the planned `scrape`/`crawl` cutover with canonical always-JSON envelope keys:
-  `ok`, `operation`, `data`, `error`, `diagnostics`, `session`, `meta`.
+- No changes yet.
+
+---
+
+## [0.3.1] - 2026-03-05
+
+### Added
+
+- Contract lock constants for the `scrape`/`crawl` cutover with canonical always-JSON envelope keys:
+  `schema_version`, `tool`, `ok`, `data`, `items`, `meta`, `warnings`, `error`.
 - Fixed option-group taxonomy for contract migration: `extraction`, `transformation`, `conversion`, `runtime`, `diagnostics`, `session`.
 - Legacy tool migration map (for compatibility planning): `crawl_url`, `extract_data`, `take_screenshot`, `get_links`, `get_page_info`, `execute_js` -> `scrape`; `crawl_many`, `deep_crawl` -> `crawl`; `close_session` -> `session.close`; `get_artifact` -> `session.artifact.get`.
 

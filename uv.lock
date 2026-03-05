@@ -1187,11 +1187,12 @@ wheels = [
 
 [[package]]
 name = "mcp-crawl4ai"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "." }
 dependencies = [
     { name = "crawl4ai" },
     { name = "fastmcp" },
+    { name = "pydantic-settings" },
 ]
 
 [package.dev-dependencies]
@@ -1208,6 +1209,7 @@ dev = [
 requires-dist = [
     { name = "crawl4ai", specifier = ">=0.8.0" },
     { name = "fastmcp", specifier = ">=3.0.0" },
+    { name = "pydantic-settings", specifier = ">=2.0" },
 ]
 
 [package.metadata.requires-dev]

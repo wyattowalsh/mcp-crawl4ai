@@ -16,11 +16,11 @@ AI agent instructions for this project.
 
 | File | Purpose |
 |------|---------|
-| `crawl4ai_mcp/server.py` | **All** server logic -- 8 tools, 2 resources, 3 prompts, lifespan, auto-setup |
+| `crawl4ai_mcp/server.py` | **All** server logic -- 11 tools, 2 resources, 3 prompts, lifespan, auto-setup |
 | `crawl4ai_mcp/__init__.py` | Package version via `importlib.metadata` |
 | `pyproject.toml` | Project config, dependencies, tool config |
 | `tests/conftest.py` | Test fixtures (mock crawler, client) |
-| `tests/test_server.py` | 60+ tests -- all in-memory, no browser |
+| `tests/test_server.py` | 100+ tests -- all in-memory, no browser |
 | `tests/manual/` | Manual live test scripts (require browser) |
 | `crawl4ai_mcp/py.typed` | PEP 561 typed package marker |
 | `.github/workflows/ci.yml` | GitHub Actions CI (test + lint + typecheck + Codecov) |
@@ -42,7 +42,7 @@ crawl4ai-mcp --setup
 # Run (stdio -- default for Claude Desktop / MCP clients)
 crawl4ai-mcp
 
-# Run (HTTP)
+# Run (HTTP -- defaults to 127.0.0.1; set --host explicitly for external exposure)
 crawl4ai-mcp --transport http --port 8000
 
 # Tests
@@ -80,7 +80,7 @@ docker run -p 8000:8000 crawl4ai-mcp
 FastMCP("crawl4ai")
   |-- lifespan: crawler_lifespan
   |     \-- AsyncWebCrawler singleton (headless Chromium)
-  |-- 8 tools (all via ctx.lifespan_context["crawler"])
+  |-- 4 tools (all via ctx.lifespan_context["crawler"])
   |-- 2 resources (config://server, crawl4ai://version)
   \-- 3 prompts (summarize_page, build_extraction_schema, compare_pages)
 ```
@@ -89,21 +89,17 @@ FastMCP("crawl4ai")
 
 | Tool | Purpose |
 |------|---------|
-| `crawl_url` | Single page -> markdown/html/text |
-| `crawl_many` | Batch crawl <=20 URLs concurrently |
-| `deep_crawl` | BFS recursive crawl (depth 1-5, max 100 pages) |
-| `extract_data` | CSS schema-based structured extraction |
-| `take_screenshot` | Full-page base64 PNG |
-| `get_links` | Internal + external link extraction |
-| `get_page_info` | Lightweight metadata + counts |
-| `execute_js` | Run JS on rendered page, return content |
+| `scrape` | Canonical single/batch scrape with shared option groups + JSON envelope |
+| `crawl` | Canonical list/deep traversal crawl with shared option groups + JSON envelope |
+| `close_session` | Close and cleanup a session-aware crawl state |
+| `get_artifact` | Retrieve session-scoped captured artifact metadata/content |
 
 ## Prompt Inventory
 
 | Prompt | Purpose |
 |--------|---------|
 | `summarize_page` | Crawl a URL and summarize its content |
-| `build_extraction_schema` | Build a CSS schema for use with extract_data |
+| `build_extraction_schema` | Build a CSS schema for use with scrape |
 | `compare_pages` | Crawl and compare two pages |
 
 ## MCP Server Rules (CRITICAL)
@@ -119,9 +115,9 @@ FastMCP("crawl4ai")
 ## Testing
 
 Tests use `fastmcp.Client(mcp)` for in-memory testing -- no browser or network required.
-The conftest patches `AsyncWebCrawler` with `AsyncMock`. All 60+ tests should pass in <60s.
+The conftest patches `AsyncWebCrawler` with `AsyncMock`. All tests should pass in <60s.
 PyPI package name: `mcp-crawl4ai` (CLI command: `crawl4ai-mcp`).
-Coverage threshold: 90% (currently ~98%). Markers: `smoke`, `integration`.
+Coverage threshold: 90% (currently ~98%). Markers: `unit`, `smoke`, `integration`, `e2e`.
 
 ## What NOT to Do
 

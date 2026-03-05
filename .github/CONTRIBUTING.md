@@ -51,14 +51,14 @@ For detailed information, see our [documentation site](https://wyattowalsh.githu
 ### Reporting Bugs 🐛
 
 1. **Check existing issues** to prevent duplicates
-2. Use the [Bug Report Template](.github/ISSUE_TEMPLATE/bug_report.yml)
+2. Use the [Bug Report Template](ISSUE_TEMPLATE/bug_report.yml)
 3. Include steps to reproduce, environment details, and error messages
 4. Provide a minimal reproducible example if possible
 
 ### Suggesting Enhancements ✨
 
 1. Check for similar ideas in existing issues
-2. Use the [Feature Request Template](.github/ISSUE_TEMPLATE/feature_request.yml)
+2. Use the [Feature Request Template](ISSUE_TEMPLATE/feature_request.yml)
 3. Clearly define the problem and proposed solution
 4. Explain how it aligns with project goals
 
@@ -71,7 +71,7 @@ We welcome improvements to user guides, API documentation, tutorials, and code c
 1. Fork the repository and create a feature branch
 2. Implement your changes following our coding standards
 3. Add relevant tests and documentation
-4. Submit a PR using the [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md)
+4. Submit a PR using the [Pull Request Template](PULL_REQUEST_TEMPLATE.md)
 5. Respond to feedback during code review
 
 ## 💻 Development Setup
@@ -94,7 +94,7 @@ cd crawl4ai-mcp
 uv sync
 
 # Install browser (first time)
-crawl4ai-setup
+crawl4ai-mcp --setup
 
 # Run tests
 uv run pytest
@@ -107,9 +107,9 @@ uv run pytest
 We follow standard Python best practices with automated tooling:
 
 - **Formatting/Linting:** Ruff
-- **Type Checking:** MyPy
+- **Type Checking:** ty
 
-Run `uv run ruff check crawl4ai_mcp/` and `uv run mypy crawl4ai_mcp/` to check compliance.
+Run `uv run ruff check crawl4ai_mcp/` and `uv run ty check crawl4ai_mcp/` to check compliance.
 
 ### Documentation Style
 
@@ -144,7 +144,7 @@ uv run pytest -m integration
 
 ### Writing Tests
 
-- Aim for high test coverage (>85%)
+- Aim for high test coverage (>=90%)
 - Include unit and integration tests
 - Never make live network requests in tests
 - Use mocking and test fixtures
@@ -177,7 +177,7 @@ When implementing or modifying MCP features, always refer to the [**MCP Specific
 
 - [ ] **Message Framing:** Use correct format for each transport
 - [ ] **Content Types:** Set proper types and encodings
-- [ ] **SSE/WebSocket:** Handle properly if applicable
+- [ ] **Transport Mode:** Validate behavior for supported transports (STDIO/HTTP)
 - [ ] **Backward Compatibility:** Maintain compatibility
 
 ### General MCP Requirements

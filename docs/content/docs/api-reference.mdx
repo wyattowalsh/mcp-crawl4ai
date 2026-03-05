@@ -1,458 +1,160 @@
 ---
 title: API Reference
-description: Complete documentation for all Crawl4AI-MCP tools and resources
+description: Canonical tool, resource, and prompt reference for Crawl4AI-MCP
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
 # API Reference
 
-This page documents every MCP tool and resource exposed by Crawl4AI-MCP. All tools follow the [Model Context Protocol](https://modelcontextprotocol.ai/) specification and are compatible with any MCP client.
+Crawl4AI-MCP exposes a canonical web-surface with envelope-based responses for crawl operations.
 
 <Callout type="info">
-  The server exposes **8 tools** and **2 resources**. Connect via stdio (default) or HTTP transport.
+  The server exposes <strong>4 tools</strong> and <strong>2 resources</strong>.
 </Callout>
 
 ## Connecting to the Server
 
 | Transport | Command |
 | :--- | :--- |
-| **stdio** (default) | `crawl4ai-mcp` or `python -m crawl4ai_mcp.server` |
+| **stdio** (default) | `crawl4ai-mcp` |
 | **HTTP** | `crawl4ai-mcp --transport http --host 127.0.0.1 --port 8000` |
 
 ---
 
 ## Tools
 
-### `crawl_url`
+### `scrape`
 
-**Title:** Crawl URL
-
-Crawl a single web page and extract its content. Use this tool when you need to read the content of a specific web page. Returns the page content in the requested format (markdown by default). For crawling multiple pages at once, use `crawl_many` instead. For recursive site crawling, use `deep_crawl`.
+Scrape one URL or a bounded list of URLs (max 20) using canonical option groups.
 
 #### Parameters
 
-| Name | Type | Required | Default | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `url` | `string` | Yes | -- | The URL to crawl. Must be http or https. |
-| `output_format` | `string` | No | `"markdown"` | Output format: `"markdown"`, `"html"`, `"text"`, or `"cleaned_html"`. |
-| `css_selector` | `string \| null` | No | `null` | CSS selector to extract a specific page section. |
-| `word_count_threshold` | `integer` | No | `200` | Minimum word count threshold for content blocks (>= 0). |
-| `wait_for` | `string \| null` | No | `null` | CSS selector or JS expression to wait for before extraction. |
-| `bypass_cache` | `boolean` | No | `false` | Skip cached results and perform a fresh crawl. |
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `targets` | `string \| string[]` | Yes | One URL string or an array of 1-20 URLs. |
+| `options` | `object \| null` | No | Canonical option groups: `extraction`, `transformation`, `conversion`, `runtime`, `diagnostics`, `session`, `render`. |
 
 #### Example Request
 
 ```json
 {
-  "name": "crawl_url",
+  "name": "scrape",
   "parameters": {
+    "targets": "https://example.com",
+    "options": {
+      "conversion": { "output_format": "markdown" },
+      "runtime": { "bypass_cache": true }
+    }
+  }
+}
+```
+
+#### Response Shape
+
+```json
+{
+  "schema_version": "scrape-crawl.v1",
+  "tool": "scrape",
+  "ok": true,
+  "data": {
+    "target": "https://example.com",
     "url": "https://example.com",
+    "ok": true,
+    "data": "# Example Domain ..."
+  },
+  "items": null,
+  "meta": {
+    "target_count": 1,
+    "option_groups": ["conversion", "runtime"],
     "output_format": "markdown",
-    "bypass_cache": true
-  }
-}
-```
-
-#### Example Response
-
-```text
-# Example Domain
-
-This domain is for use in illustrative examples in documents...
-```
-
-The response is a plain string containing the page content in the requested format. Content is truncated at 25,000 characters with a notice appended if exceeded.
-
----
-
-### `crawl_many`
-
-**Title:** Crawl Multiple URLs
-
-Crawl multiple web pages concurrently and return their content. Accepts up to 20 URLs, crawls them all in parallel using the shared browser, and returns an array of results. Each result includes the URL, success status, and content (or error message). Use `crawl_url` for a single page or `deep_crawl` for recursive crawling.
-
-#### Parameters
-
-| Name | Type | Required | Default | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `urls` | `array[string]` | Yes | -- | List of URLs to crawl. Minimum 1, maximum 20. |
-| `output_format` | `string` | No | `"markdown"` | Output format: `"markdown"`, `"html"`, `"text"`, or `"cleaned_html"`. |
-| `css_selector` | `string \| null` | No | `null` | CSS selector to extract a specific page section. |
-| `word_count_threshold` | `integer` | No | `200` | Minimum word count threshold for content blocks (>= 0). |
-| `bypass_cache` | `boolean` | No | `false` | Skip cached results and perform a fresh crawl. |
-
-#### Example Request
-
-```json
-{
-  "name": "crawl_many",
-  "parameters": {
-    "urls": [
-      "https://example.com",
-      "https://example.org"
-    ],
-    "output_format": "markdown"
-  }
-}
-```
-
-#### Example Response
-
-```json
-[
-  {
-    "url": "https://example.com",
-    "success": true,
-    "content": "# Example Domain\n\nThis domain is for use in illustrative examples..."
+    "diagnostics": false,
+    "session_id": null,
+    "extraction_mode": null
   },
-  {
-    "url": "https://example.org",
-    "success": true,
-    "content": "# Example Domain\n\n..."
-  }
-]
-```
-
-Each item's content is truncated at 5,000 characters.
-
----
-
-### `deep_crawl`
-
-**Title:** Deep Crawl
-
-Perform a breadth-first deep crawl starting from a seed URL. Discovers and follows links on each page up to `max_depth` levels, collecting up to `max_pages` total pages. Returns a JSON object with the seed URL, total pages crawled, and an array of per-page results each containing URL, depth, and content.
-
-#### Parameters
-
-| Name | Type | Required | Default | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `url` | `string` | Yes | -- | The seed URL to start deep crawling from. |
-| `max_depth` | `integer` | No | `2` | Maximum crawl depth from seed URL (1--5). |
-| `max_pages` | `integer` | No | `10` | Maximum total pages to crawl (1--100). |
-| `include_external` | `boolean` | No | `false` | Follow links to external domains. |
-| `output_format` | `string` | No | `"markdown"` | Output format: `"markdown"`, `"html"`, `"text"`, or `"cleaned_html"`. |
-
-#### Example Request
-
-```json
-{
-  "name": "deep_crawl",
-  "parameters": {
-    "url": "https://example.com",
-    "max_depth": 2,
-    "max_pages": 5
-  }
-}
-```
-
-#### Example Response
-
-```json
-{
-  "seed_url": "https://example.com",
-  "pages_crawled": 3,
-  "results": [
-    {
-      "url": "https://example.com",
-      "depth": 0,
-      "content": "# Example Domain\n\n..."
-    },
-    {
-      "url": "https://example.com/about",
-      "depth": 1,
-      "content": "# About\n\n..."
-    }
-  ]
+  "warnings": [],
+  "error": null
 }
 ```
 
 ---
 
-### `extract_data`
+### `crawl`
 
-**Title:** Extract Structured Data
+Crawl with canonical traversal controls.
 
-Extract structured data from a page using CSS selectors. Provide a schema defining the base selector for repeating items and the fields to extract. Returns the extracted data as a JSON array. Use this when you need tabular or list-like data from a page rather than raw text content.
+- `options.traversal.mode="list"` for bounded URL traversal.
+- `options.traversal.mode="deep"` for recursive BFS/DFS traversal from one seed URL.
 
 #### Parameters
 
-| Name | Type | Required | Default | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `url` | `string` | Yes | -- | The URL to extract structured data from. |
-| `schema` | `object` | Yes | -- | CSS extraction schema with `name`, `baseSelector`, and `fields` array. Each field has `name`, `selector`, `type` (`"text"` or `"attribute"`), and optional `attribute`. |
-| `wait_for` | `string \| null` | No | `null` | CSS selector or JS expression to wait for before extraction. |
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `targets` | `string \| string[]` | Yes | One URL or list of URLs (deep mode requires exactly one). |
+| `options` | `object \| null` | No | Same option groups as `scrape`, plus `traversal`. |
 
-#### Example Request
+#### Traversal Option Highlights
 
-```json
-{
-  "name": "extract_data",
-  "parameters": {
-    "url": "https://example.com/products",
-    "schema": {
-      "name": "Products",
-      "baseSelector": "div.product-card",
-      "fields": [
-        { "name": "title", "selector": "h2", "type": "text" },
-        { "name": "price", "selector": ".price", "type": "text" },
-        { "name": "image", "selector": "img", "type": "attribute", "attribute": "src" }
-      ]
-    }
-  }
-}
-```
-
-#### Example Response
-
-```json
-[
-  {
-    "title": "Widget A",
-    "price": "$19.99",
-    "image": "https://example.com/img/widget-a.jpg"
-  },
-  {
-    "title": "Widget B",
-    "price": "$29.99",
-    "image": "https://example.com/img/widget-b.jpg"
-  }
-]
-```
+| Field | Description |
+| :--- | :--- |
+| `mode` | `list` or `deep` |
+| `max_depth` / `max_pages` | Deep traversal bounds |
+| `crawl_mode` | `bfs` or `dfs` for deep mode |
+| `include_external` / `url_filters` | Deep frontier controls |
+| `max_concurrency`, `rate_limit_*`, `dispatcher` | List-mode dispatcher controls |
 
 ---
 
-### `take_screenshot`
+### `close_session`
 
-**Title:** Take Screenshot
+Close a stateful session and purge associated runtime state/artifacts.
 
-Capture a full-page screenshot of a web page. Navigates to the URL, optionally waits for a selector, then captures a screenshot. Returns a JSON object with the URL, a base64-encoded PNG image, and the format indicator. Useful for visual verification or capturing rendered state of dynamic pages.
-
-#### Parameters
-
-| Name | Type | Required | Default | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `url` | `string` | Yes | -- | The URL to screenshot. |
-| `wait_for` | `string \| null` | No | `null` | CSS selector or JS expression to wait for before capture. |
-
-#### Example Request
-
-```json
-{
-  "name": "take_screenshot",
-  "parameters": {
-    "url": "https://example.com"
-  }
-}
-```
-
-#### Example Response
-
-```json
-{
-  "url": "https://example.com",
-  "screenshot_base64": "iVBORw0KGgoAAAANSUhEUg...",
-  "format": "png"
-}
-```
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `session_id` | `string` | Yes | Session identifier created via scrape/crawl session options. |
 
 ---
 
-### `get_links`
+### `get_artifact`
 
-**Title:** Get Links
+Retrieve metadata/content for artifacts captured by `scrape` or `crawl`.
 
-Extract and categorize all links found on a web page. Crawls the page and returns internal links (same domain) and external links (other domains) as separate arrays, along with totals for each category. Useful for site mapping, link analysis, or finding related pages before a deep crawl.
-
-#### Parameters
-
-| Name | Type | Required | Default | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `url` | `string` | Yes | -- | The URL to extract links from. |
-
-#### Example Request
-
-```json
-{
-  "name": "get_links",
-  "parameters": {
-    "url": "https://example.com"
-  }
-}
-```
-
-#### Example Response
-
-```json
-{
-  "url": "https://example.com",
-  "internal_links": [
-    { "href": "https://example.com/about", "text": "About" }
-  ],
-  "external_links": [
-    { "href": "https://iana.org", "text": "IANA" }
-  ],
-  "total_internal": 1,
-  "total_external": 1
-}
-```
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `session_id` | `string` | Yes | Session identifier that owns the artifact. |
+| `artifact_id` | `string` | Yes | Artifact identifier returned in run metadata. |
+| `include_content` | `boolean` | No | Include bounded artifact content when `true`. |
 
 ---
 
-### `get_page_info`
+## Canonical Option Groups
 
-**Title:** Get Page Info
-
-Get metadata and summary information about a web page. Returns a lightweight overview including the page title, description, language, link and media counts, and the full metadata dict. Does not return the full page content -- use `crawl_url` for that. Useful for quickly inspecting a page before deciding to do a full crawl.
-
-#### Parameters
-
-| Name | Type | Required | Default | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `url` | `string` | Yes | -- | The URL to inspect. |
-
-#### Example Request
-
-```json
-{
-  "name": "get_page_info",
-  "parameters": {
-    "url": "https://example.com"
-  }
-}
-```
-
-#### Example Response
-
-```json
-{
-  "url": "https://example.com",
-  "title": "Example Domain",
-  "description": "This domain is for use in illustrative examples.",
-  "language": "en",
-  "links_count": {
-    "internal": 0,
-    "external": 1
-  },
-  "media_count": {
-    "images": 0,
-    "videos": 0,
-    "audio": 0
-  },
-  "metadata": {
-    "title": "Example Domain",
-    "description": "This domain is for use in illustrative examples.",
-    "language": "en"
-  }
-}
-```
-
----
-
-### `execute_js`
-
-**Title:** Execute JavaScript
-
-Load a web page and execute JavaScript on it, then return the content. Navigates to the URL, runs the provided JavaScript code, optionally waits for a condition, then extracts the resulting page content as markdown. Useful for interacting with dynamic pages -- clicking buttons, filling forms, or triggering client-side rendering before extraction.
-
-#### Parameters
-
-| Name | Type | Required | Default | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `url` | `string` | Yes | -- | The URL to load before executing JavaScript. |
-| `js_code` | `string` | Yes | -- | JavaScript code to execute on the page after it loads. |
-| `wait_for` | `string \| null` | No | `null` | CSS selector or JS expression to wait for after JS execution. |
-
-#### Example Request
-
-```json
-{
-  "name": "execute_js",
-  "parameters": {
-    "url": "https://example.com",
-    "js_code": "document.querySelector('button.load-more').click()",
-    "wait_for": "div.extra-content"
-  }
-}
-```
-
-#### Example Response
-
-```text
-# Example Domain
-
-This domain is for use in illustrative examples...
-
-## Extra Content
-
-Additional content loaded after clicking the button...
-```
-
-The response is a plain string containing the page content as markdown after JS execution.
+| Group | Fields |
+| :--- | :--- |
+| `extraction` | `css_selector`, `word_count_threshold`, `schema`, `extraction_mode` |
+| `transformation` | `js_code` |
+| `conversion` | `output_format`, `capture_artifacts` |
+| `runtime` | `wait_for`, `bypass_cache`, `timeout_ms`, `max_retries`, `retry_backoff_ms`, `max_content_chars` |
+| `diagnostics` | `include_diagnostics` |
+| `session` | `session_id`, `session_ttl_seconds`, `session_max_uses`, artifact retention fields |
+| `render` | `viewport_width`, `viewport_height` |
+| `traversal` | `mode`, deep controls, dispatcher controls |
 
 ---
 
 ## Resources
 
-### `config://server`
-
-**MIME type:** `application/json`
-
-Returns the current server configuration and capabilities.
-
-#### Example Response
-
-```json
-{
-  "name": "crawl4ai",
-  "version": "0.2.0",
-  "tools": [
-    "crawl_url",
-    "crawl_many",
-    "deep_crawl",
-    "extract_data",
-    "take_screenshot",
-    "get_links",
-    "get_page_info",
-    "execute_js"
-  ],
-  "max_response_chars": 25000,
-  "browser_config": {
-    "headless": true,
-    "browser_type": "chromium"
-  }
-}
-```
+| URI | MIME Type | Description |
+| :--- | :--- | :--- |
+| `config://server` | `application/json` | Server config and canonical tool inventory |
+| `crawl4ai://version` | `application/json` | Server/dependency versions |
 
 ---
 
-### `crawl4ai://version`
+## Prompts
 
-**MIME type:** `application/json`
-
-Returns server and dependency version information.
-
-#### Example Response
-
-```json
-{
-  "server_version": "0.2.0",
-  "crawl4ai_version": "0.8.0",
-  "fastmcp_version": "3.0.0"
-}
-```
-
----
-
-## Error Handling
-
-Tool errors are raised as `ToolError` exceptions, which FastMCP translates into standard MCP error responses. Common error cases:
-
-| Condition | Error |
-| :--- | :--- |
-| Invalid URL (not http/https) | `"Invalid URL: '...'. Only http and https URLs are supported."` |
-| Crawl failure | `"Crawl failed for <url>: <message>"` |
-| No data extracted | `"No data extracted from <url>. Check your schema selectors."` |
-| No screenshot data | `"No screenshot data returned for <url>"` |
-| Server not initialized | `"Crawler not available -- server not fully initialized."` |
+| Prompt | Parameters | Description |
+| :--- | :--- | :--- |
+| `summarize_page` | `url`, `focus` | Suggests a `scrape`-first summarization workflow |
+| `build_extraction_schema` | `url`, `data_type` | Guides schema authoring for `scrape` extraction options |
+| `compare_pages` | `url1`, `url2` | Suggests comparing two pages via `scrape` |

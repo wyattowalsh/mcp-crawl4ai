@@ -35,8 +35,8 @@ Thank you for your interest in contributing to Crawl4AI-MCP! This guide will hel
     # Install dependencies (including dev group)
     uv sync --group dev
 
-    # Install Playwright browsers for crawl4ai
-    crawl4ai-setup
+    # Install browser dependencies for crawl4ai-mcp
+    crawl4ai-mcp --setup
     ```
   </Tab>
   <Tab value="Windows">
@@ -48,8 +48,8 @@ Thank you for your interest in contributing to Crawl4AI-MCP! This guide will hel
     # Install dependencies (including dev group)
     uv sync --group dev
 
-    # Install Playwright browsers for crawl4ai
-    crawl4ai-setup
+    # Install browser dependencies for crawl4ai-mcp
+    crawl4ai-mcp --setup
     ```
   </Tab>
 </Tabs>
@@ -75,7 +75,7 @@ Example: `feature/add-llm-extraction`
 We use the following tools to maintain code quality:
 
 - **Ruff**: For linting and formatting (configured in `pyproject.toml`)
-- **MyPy**: For static type checking (strict mode)
+- **ty**: For static type checking
 
 Run the linting and formatting tools:
 
@@ -87,7 +87,7 @@ uv run ruff check .
 uv run ruff format .
 
 # Type check
-uv run mypy crawl4ai_mcp/
+uv run ty check crawl4ai_mcp/
 ```
 
 ### Testing

@@ -26,7 +26,7 @@ body:
       label: 🔍 Bug Description
       description: A clear and concise description of what the bug is. Be specific about what functionality is affected.
       placeholder: |
-        Example: "The `crawl_url` tool fails with a timeout error when attempting to crawl sites that require heavy JavaScript rendering, even with the browser engine enabled."
+        Example: "The `scrape` tool fails with a timeout error when attempting to process sites that require heavy JavaScript rendering."
     validations:
       required: true
 
@@ -36,15 +36,16 @@ body:
       label: 🔄 Steps To Reproduce
       description: Provide detailed, step-by-step instructions to reproduce the behavior. Use numbered lists.
       placeholder: |
-        1. Start the MCP server: `crawl4ai-mcp serve --transport http`
-        2. Make a POST request to `http://localhost:8000/mcp/v1/tools` with the following payload:
+        1. Start the MCP server: `crawl4ai-mcp --transport http`
+        2. Connect your MCP client to the local HTTP server.
+        3. Call the affected tool (for example, `scrape`) with the following arguments:
            ```json
            {
-             "name": "crawl_url",
-             "parameters": { ... }
+             "targets": "https://example.com",
+             "options": { ... }
            }
            ```
-        3. Observe the error...
+        4. Observe the error...
       render: markdown
     validations:
       required: true
@@ -71,7 +72,7 @@ body:
       label: ✅ Expected Behavior vs. ❌ Actual Behavior
       description: Describe what should happen versus what actually happens. Include error messages or deviations.
       placeholder: |
-        **Expected:** The `crawl_url` tool should successfully render the page and return the extracted content.
+        **Expected:** The `scrape` tool should successfully process the page and return the requested content.
         **Actual:** The tool execution hangs and eventually returns a timeout error.
       render: markdown
     validations:
@@ -98,9 +99,9 @@ body:
         | :------------------- | :------------------------------------------ |
         | OS                   | <!-- e.g., macOS 14.5, Ubuntu 22.04 LTS --> |
         | Python Version       | <!-- e.g., 3.14.0 -->                       |
-        | crawl4ai-mcp Version | <!-- e.g., 0.2.1 -->                        |
+        | crawl4ai-mcp Version | <!-- e.g., 0.3.0 -->                        |
         | Installation Method  | <!-- e.g., pip, source, docker -->           |
-        | MCP Transport Used   | <!-- e.g., STDIO, HTTP/SSE, WebSocket -->    |
+        | MCP Transport Used   | <!-- e.g., STDIO, HTTP -->                    |
         | Browser (if relevant)| <!-- e.g., Chromium 125, Firefox 126 -->    |
         | Client Application   | <!-- e.g., Claude Desktop, custom client --> |
       render: markdown
@@ -113,7 +114,7 @@ body:
       label: 🔌 MCP-Specific Information (If Applicable)
       description: If the issue relates to MCP protocol implementation, provide details here.
       placeholder: |
-        - **MCP Tool/Resource Affected:** e.g. `crawl_url`
+        - **MCP Tool/Resource Affected:** e.g. `scrape`
         - **Transport Configuration:** Any specific settings used?
         - **Authentication Method:** e.g., API key, none
       render: markdown

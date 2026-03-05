@@ -35,7 +35,7 @@
 
 ## Overview
 
-**Crawl4AI-MCP** is a [Model Context Protocol](https://modelcontextprotocol.io) server that gives AI systems access to the live web. Built on [FastMCP v3](https://github.com/jlowin/fastmcp) and [Crawl4AI](https://github.com/unclecode/crawl4ai), it exposes **8 tools**, **2 resources**, and **3 prompts** through the standardized MCP interface, backed by a lifespan-managed headless Chromium browser.
+**Crawl4AI-MCP** is a [Model Context Protocol](https://modelcontextprotocol.io) server that gives AI systems access to the live web. Built on [FastMCP v3](https://github.com/jlowin/fastmcp) and [Crawl4AI](https://github.com/unclecode/crawl4ai), it exposes **4 tools**, **2 resources**, and **3 prompts** through the standardized MCP interface, backed by a lifespan-managed headless Chromium browser.
 
 **Only 2 runtime dependencies** &mdash; `fastmcp` and `crawl4ai`.
 
@@ -45,14 +45,15 @@
 ### Key Features
 
 - **Full MCP compliance** via FastMCP v3 with tool annotations (`readOnlyHint`, `destructiveHint`, etc.)
-- **8 focused tools** for crawling, extraction, screenshots, and more
+- **4 focused tools** centered on canonical scrape/crawl plus session lifecycle/artifacts
 - **3 prompts** for common LLM workflows (summarize, extract schema, compare pages)
 - **2 resources** exposing server configuration and version info
 - **Headless Chromium** managed as a lifespan singleton (start once, reuse everywhere)
 - **Multiple transports** &mdash; stdio (default) and Streamable HTTP
 - **LLM-optimized output** &mdash; markdown, cleaned HTML, raw HTML, or plain text
-- **Structured data extraction** using CSS selector schemas
-- **Breadth-first deep crawling** with configurable depth and page limits
+- **Canonical option groups** for extraction, runtime, diagnostics, sessions, rendering, and traversal
+- **List and deep traversal** in one `crawl` contract
+- **Session-aware workflows** with explicit session close and artifact retrieval tools
 - **Auto browser setup** &mdash; detects missing Playwright browsers and installs automatically
 
 ---
@@ -126,6 +127,9 @@ crawl4ai-mcp
 crawl4ai-mcp --transport http --port 8000
 ```
 
+> [!NOTE]
+> HTTP binds to `127.0.0.1` by default (private/local only); for external exposure, set `--host` explicitly and use a reverse proxy for TLS/auth.
+
 </details>
 
 <details>
@@ -168,181 +172,37 @@ npx @modelcontextprotocol/inspector crawl4ai-mcp
 
 ## Tools
 
-### `crawl_url`
+The canonical surface now exposes **4 tools**:
 
-Crawl a single web page and extract its content.
+### `scrape`
 
-<details>
-<summary>Parameters</summary>
+Scrape one URL or a bounded list of URLs (up to 20) with a single canonical envelope response.
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `url` | `str` | *required* | The URL to crawl. Must be http or https. |
-| `output_format` | `"markdown"` \| `"html"` \| `"text"` \| `"cleaned_html"` | `"markdown"` | Output format for the extracted content. |
-| `css_selector` | `str \| None` | `None` | CSS selector to extract a specific page section. |
-| `word_count_threshold` | `int` (&ge;0) | `200` | Minimum word count threshold for content blocks. |
-| `wait_for` | `str \| None` | `None` | CSS selector or JS expression to wait for before extraction. |
-| `bypass_cache` | `bool` | `False` | Skip cached results and perform a fresh crawl. |
+- Input: `targets` (`str | list[str]`) and optional grouped `options`
+- Supports extraction (`schema`, `extraction_mode`), runtime controls, diagnostics, session settings, render settings, and artifact capture
+- Returns canonical JSON envelope with `schema_version`, `tool`, `ok`, `data/items`, `meta`, `warnings`, `error`
 
-**Returns:** Page content as a string in the requested format (truncated at 25K chars).
+### `crawl`
 
-</details>
+Crawl with canonical traversal controls.
 
----
+- `options.traversal.mode="list"` for bounded list traversal
+- `options.traversal.mode="deep"` for recursive BFS/DFS traversal from a single seed
+- Shares scrape option groups plus traversal options in the same envelope shape
 
-### `crawl_many`
+### `close_session`
 
-Crawl up to 20 URLs concurrently and return all results.
+Close a stateful session created via `options.session.session_id`.
 
-<details>
-<summary>Parameters</summary>
+### `get_artifact`
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `urls` | `list[str]` (1&ndash;20) | *required* | List of URLs to crawl concurrently. |
-| `output_format` | `"markdown"` \| `"html"` \| `"text"` \| `"cleaned_html"` | `"markdown"` | Output format for extracted content. |
-| `css_selector` | `str \| None` | `None` | CSS selector to extract a specific page section. |
-| `word_count_threshold` | `int` (&ge;0) | `200` | Minimum word count threshold for content blocks. |
-| `wait_for` | `str \| None` | `None` | CSS selector or JS expression to wait for before extraction. |
-| `bypass_cache` | `bool` | `False` | Skip cached results and perform fresh crawls. |
+Retrieve artifact metadata/content captured during `scrape` or `crawl` when `options.conversion.capture_artifacts` is enabled.
 
-**Returns:** JSON array of `{url, success, content}` objects (each item truncated at 5K chars).
+### Choosing core vs advanced usage
 
-</details>
-
----
-
-### `deep_crawl`
-
-Breadth-first recursive crawl starting from a seed URL.
-
-<details>
-<summary>Parameters</summary>
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `url` | `str` | *required* | The seed URL to start deep crawling from. |
-| `max_depth` | `int` (1&ndash;5) | `2` | Maximum crawl depth from the seed URL. |
-| `max_pages` | `int` (1&ndash;100) | `10` | Maximum total pages to crawl. |
-| `include_external` | `bool` | `False` | Follow links to external domains. |
-| `output_format` | `"markdown"` \| `"html"` \| `"text"` \| `"cleaned_html"` | `"markdown"` | Output format for extracted content. |
-| `css_selector` | `str \| None` | `None` | CSS selector to extract a specific page section. |
-| `word_count_threshold` | `int` (&ge;0) | `200` | Minimum word count threshold for content blocks. |
-| `bypass_cache` | `bool` | `False` | Skip cached results and perform fresh crawls. |
-
-**Returns:** JSON object with `seed_url`, `pages_crawled`, and `results` array (per-page URL, depth, and content).
-
-</details>
-
----
-
-### `extract_data`
-
-Extract structured data from a page using a CSS selector schema.
-
-<details>
-<summary>Parameters</summary>
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `url` | `str` | *required* | The URL to extract structured data from. |
-| `schema` | `dict` | *required* | CSS extraction schema with `name`, `baseSelector`, and `fields` array. Each field has `name`, `selector`, `type` (`"text"` or `"attribute"`), and optional `attribute`. |
-| `wait_for` | `str \| None` | `None` | CSS selector or JS expression to wait for before extraction. |
-
-**Returns:** Extracted data as a JSON array.
-
-</details>
-
-<details>
-<summary>Example schema</summary>
-
-```json
-{
-  "name": "products",
-  "baseSelector": ".product-card",
-  "fields": [
-    { "name": "title", "selector": "h2", "type": "text" },
-    { "name": "price", "selector": ".price", "type": "text" },
-    { "name": "link", "selector": "a", "type": "attribute", "attribute": "href" }
-  ]
-}
-```
-
-</details>
-
----
-
-### `take_screenshot`
-
-Capture a full-page PNG screenshot of a web page.
-
-<details>
-<summary>Parameters</summary>
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `url` | `str` | *required* | The URL to screenshot. |
-| `wait_for` | `str \| None` | `None` | CSS selector or JS expression to wait for before capture. |
-| `viewport_width` | `int` (320&ndash;3840) | `1280` | Viewport width in pixels. |
-| `viewport_height` | `int` (240&ndash;2160) | `720` | Viewport height in pixels. |
-
-**Returns:** JSON object with `url`, `screenshot_base64` (base64-encoded PNG), and `format`.
-
-</details>
-
----
-
-### `get_links`
-
-Extract and categorize all links found on a web page.
-
-<details>
-<summary>Parameters</summary>
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `url` | `str` | *required* | The URL to extract links from. |
-
-**Returns:** JSON object with `internal_links`, `external_links`, and totals for each category.
-
-</details>
-
----
-
-### `get_page_info`
-
-Get metadata and summary information about a web page.
-
-<details>
-<summary>Parameters</summary>
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `url` | `str` | *required* | The URL to inspect. |
-
-**Returns:** JSON object with `title`, `description`, `language`, `links_count`, `media_count`, and full `metadata` dict.
-
-</details>
-
----
-
-### `execute_js`
-
-Execute JavaScript on a rendered page and return the resulting content.
-
-<details>
-<summary>Parameters</summary>
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `url` | `str` | *required* | The URL to load before executing JavaScript. |
-| `js_code` | `str` | *required* | JavaScript code to execute on the page after it loads. |
-| `wait_for` | `str \| None` | `None` | CSS selector or JS expression to wait for after JS execution. |
-| `output_format` | `"markdown"` \| `"html"` \| `"text"` \| `"cleaned_html"` | `"markdown"` | Output format for the resulting content. |
-
-**Returns:** Page content after JS execution as a string in the requested format.
-
-</details>
+- **Core path (recommended):** use `scrape`/`crawl` with minimal options (`runtime`, `conversion.output_format`, `traversal.mode="list"`). This keeps behavior predictable and low-risk for most agent workflows.
+- **Advanced path (explicit opt-in):** use deep traversal, custom dispatcher controls, JS transforms, extraction schemas, and artifact capture only when required by task outcomes.
+- **Safety budgets and gates:** inspect `config://server` for `settings.defaults`, `settings.limits`, `settings.policies`, and `settings.capabilities` to understand active constraints and feature gates before enabling advanced options.
 
 ---
 
@@ -358,7 +218,7 @@ Execute JavaScript on a rendered page and return the resulting content.
 | Prompt | Parameters | Description |
 |--------|------------|-------------|
 | `summarize_page` | `url`, `focus` (default: `"key points"`) | Crawl a page and summarize its content with the specified focus |
-| `build_extraction_schema` | `url`, `data_type` | Inspect a page and build a CSS extraction schema for `extract_data` |
+| `build_extraction_schema` | `url`, `data_type` | Inspect a page and build a CSS extraction schema for `scrape` |
 | `compare_pages` | `url1`, `url2` | Crawl two pages and produce a structured comparison |
 
 ---
@@ -369,29 +229,25 @@ Execute JavaScript on a rendered page and return the resulting content.
 graph TD
     A[MCP Client] -->|stdio / HTTP| B[FastMCP v3]
     B --> C[Tool Router]
-    C --> D[crawl_url]
-    C --> E[crawl_many]
-    C --> F[deep_crawl]
-    C --> G[extract_data]
-    C --> H[take_screenshot]
-    C --> I[get_links]
-    C --> J[get_page_info]
-    C --> K[execute_js]
-    D & E & F & G & H & I & J & K --> L[AsyncWebCrawler Singleton]
-    L --> M[Headless Chromium]
-    B --> N[Resources]
-    B --> O[Prompts]
+    C --> D[scrape]
+    C --> E[crawl]
+    C --> F[close_session]
+    C --> G[get_artifact]
+    D & E & F & G --> N[AsyncWebCrawler Singleton]
+    N --> O[Headless Chromium]
+    B --> P[Resources]
+    B --> Q[Prompts]
 
     style B fill:#4B8BBE,color:#fff
-    style L fill:#FF6B35,color:#fff
-    style M fill:#2496ED,color:#fff
+    style N fill:#FF6B35,color:#fff
+    style O fill:#2496ED,color:#fff
 ```
 
 The server uses a single-module architecture:
 
 - **FastMCP v3** handles MCP protocol negotiation, transport, tool/resource/prompt registration, and message routing
 - **Lifespan-managed `AsyncWebCrawler`** starts a headless Chromium browser once at server startup and shares it across all tool invocations, then shuts it down cleanly on exit
-- **8 tool functions** decorated with `@mcp.tool()` call directly into the crawl4ai API
+- **4 tool functions** decorated with `@mcp.tool()` define the canonical surface
 - **2 resource functions** decorated with `@mcp.resource()` return JSON
 - **3 prompt functions** decorated with `@mcp.prompt` return structured `Message` lists
 
@@ -408,7 +264,7 @@ The server uses a single-module architecture:
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--transport` | `stdio` | Transport protocol: `stdio` or `http` |
-| `--host` | `0.0.0.0` | Host to bind (HTTP transport only) |
+| `--host` | `127.0.0.1` | Host to bind (HTTP transport only) |
 | `--port` | `8000` | Port to bind (HTTP transport only) |
 | `--setup` | &mdash; | Install Playwright browsers and exit |
 
@@ -429,11 +285,20 @@ No environment variables are required. The server uses sensible defaults for all
 # Run all tests
 uv run pytest
 
-# With coverage
+# Coverage gate (>=90%)
 uv run pytest --cov=crawl4ai_mcp --cov-report=term-missing
 
 # Smoke tests only
 uv run pytest -m smoke
+
+# Unit tests only
+uv run pytest -m unit
+
+# Integration workflow tests
+uv run pytest -m integration
+
+# End-to-end workflow tests
+uv run pytest -m e2e
 
 # Manual live test (requires browser)
 uv run python tests/manual/test_live.py

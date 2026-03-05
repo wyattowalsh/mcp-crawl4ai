@@ -18,7 +18,7 @@ import { Callout } from 'nextra/components'
 
 <div className="card">
   ### 🔌 Full MCP Compliance
-  Complete implementation of the MCP v1 server specification with multiple transport options (STDIO, HTTP/SSE)
+  Complete implementation of the MCP v1 server specification with multiple transport options (STDIO, HTTP)
 </div>
 
 <div className="card">
@@ -68,16 +68,11 @@ Crawl4AI MCP can be installed in multiple ways to fit your needs.
 <Tabs items={['pip', 'Modern Python (uv)', 'Docker', 'Development']}>
   <Tab>
     ```bash
-    # Basic installation
+    # Install package
     pip install crawl4ai-mcp
     
-    # With browser automation support (recommended)
-    pip install "crawl4ai-mcp[playwright]"
-    python -m playwright install --with-deps
-    
-    # With all features
-    pip install "crawl4ai-mcp[all]"
-    python -m playwright install --with-deps
+    # Install browser dependencies (first time)
+    crawl4ai-mcp --setup
     ```
   </Tab>
   <Tab>
@@ -86,16 +81,11 @@ Crawl4AI MCP can be installed in multiple ways to fit your needs.
     # https://github.com/astral-sh/uv
     curl -LsSf https://astral.sh/uv/install.sh | sh
     
-    # Basic installation with UV
+    # Install package with UV
     uv pip install crawl4ai-mcp
     
-    # With browser automation support
-    uv pip install "crawl4ai-mcp[playwright]"
-    python -m playwright install --with-deps
-    
-    # With all features (significantly faster than pip)
-    uv pip install "crawl4ai-mcp[all]"
-    python -m playwright install --with-deps
+    # Install browser dependencies (first time)
+    crawl4ai-mcp --setup
     ```
   </Tab>
   <Tab>
@@ -106,9 +96,9 @@ Crawl4AI MCP can be installed in multiple ways to fit your needs.
     # Run with default settings
     docker run -p 8000:8000 ghcr.io/wyattowalsh/crawl4ai-mcp:latest
     
-    # Run with custom configuration file
-    docker run -p 8000:8000 -v $(pwd)/config.yaml:/app/config.yaml \
-      ghcr.io/wyattowalsh/crawl4ai-mcp:latest --config /app/config.yaml
+    # Use environment variables for runtime tuning when needed
+    docker run -p 8000:8000 -e CRAWL4AI_MCP_DEFAULTS__MAX_RESPONSE_CHARS=50000 \
+      ghcr.io/wyattowalsh/crawl4ai-mcp:latest
     ```
   </Tab>
   <Tab>
@@ -124,22 +114,14 @@ Crawl4AI MCP can be installed in multiple ways to fit your needs.
     # Install in development mode
     pip install -e .
     
-    # For full development environment with all dependencies
-    pip install -e ".[dev,http,browser,llm]"
-    
-    # Alternative with modern UV installation (faster)
-    uv pip install -e ".[dev,http,browser,llm]"
+    # Install development tooling
+    uv sync --group dev
     ```
   </Tab>
 </Tabs>
 
 <Callout type="info">
-  The optional dependency groups allow you to install only what you need:
-  - `[http]` - For HTTP/SSE transport support (FastAPI, uvicorn)
-  - `[browser]` - For browser-based crawling with JavaScript support (playwright)
-  - `[llm]` - For LLM-based extraction and summarization features
-  - `[dev]` - Development tools (pytest, mypy, ruff, etc.)
-  - `[all]` - All of the above
+  Install `crawl4ai-mcp` directly (no transport extras required), then run `crawl4ai-mcp --setup` once to install browser dependencies.
 </Callout>
 
 ## Quick Start
@@ -149,18 +131,16 @@ Once installed, you can start the server with the `crawl4ai-mcp` command:
 ```bash
 # Option 1: Default - Start with STDIO transport
 # (Ideal for direct client integration like Claude Desktop)
-crawl4ai-mcp serve
+crawl4ai-mcp
 
-# Option 2: Start with HTTP/SSE transport on localhost port 8000
-# (Requires [http] extras: pip install crawl4ai-mcp[http])
-crawl4ai-mcp serve --transport http --host 127.0.0.1 --port 8000
+# Option 2: Start with HTTP transport on localhost port 8000
+crawl4ai-mcp --transport http --host 127.0.0.1 --port 8000
 
-# Option 3: Start with a configuration file
-# (Overrides command-line args and defaults)
-crawl4ai-mcp serve --config my_config.yaml
+# Option 3: Install browser dependencies (first time)
+crawl4ai-mcp --setup
 
 # Option 4: See all available options and help
-crawl4ai-mcp serve --help
+crawl4ai-mcp --help
 ```
 
 ### Connecting an MCP Client
@@ -173,13 +153,14 @@ crawl4ai-mcp serve --help
        - Name: Crawl4AI
        - Transport: stdio or http
        - Path: Path to installed crawl4ai-mcp, or HTTP URL
-       - Arguments: "serve" (for stdio) or empty (for HTTP)
+       - Arguments: leave empty for stdio, or pass `--transport http --host 127.0.0.1 --port 8000` for HTTP
     4. Save and enable the server
     5. In Claude, use the /tool command to access available tools
   </Tab>
   <Tab>
     ```python
-    from fastmcp import MCPClient
+    import json
+from fastmcp import MCPClient
     
     # Connect to the server
     client = MCPClient("http://localhost:8000")  # For HTTP transport
@@ -190,12 +171,12 @@ crawl4ai-mcp serve --help
     
     # Call a tool
     result = client.call_tool(
-        "crawl_url", 
-        {"url": "https://example.com", "format": "markdown"}
+        "scrape",
+        {"targets": "https://example.com", "options": {"conversion": {"output_format": "markdown"}}}
     )
-    
-    # Print the result
-    print(result["content"][:500] + "...")  # Print first 500 chars
+
+    payload = json.loads(result["content"])
+    print(payload["data"]["data"][:500] + "...")
     ```
   </Tab>
   <Tab>
@@ -213,20 +194,21 @@ Crawl4AI-MCP is built with a modular, type-safe architecture emphasizing perform
 
 ### Core Components
 
-- **Server Layer**: Implements the MCP v1 specification with transport options (STDIO, HTTP/SSE)
+- **Server Layer**: Implements the MCP v1 specification with transport options (STDIO, HTTP)
 - **Core Engine**: High-performance asynchronous crawling with memory-adaptive concurrency
-- **CrawlerManager**: Central coordinator for all crawling operations with state management
-- **HttpClientManager**: Optimized, connection-pooled HTTP client with retry logic and stats
+- **Crawler Lifecycle**: Shared `AsyncWebCrawler` managed through FastMCP lifespan context
+- **Session & Artifacts**: Session registry and artifact store for crawl state and retrieval
 - **Extraction Pipeline**: Processes raw web content into LLM-friendly formats
 - **Resource Manager**: Handles MCP resources with persistent storage and retrieval
 
-### Memory-Adaptive Concurrency
+### Runtime Options
 
-The system automatically adjusts concurrency based on available system resources:
+Use the built-in CLI options to select transport and bootstrap browser dependencies:
 
 ```bash
-# Example configuration with memory-adaptive settings
-crawl4ai-mcp serve --max-memory-percent 75 --min-concurrent-requests 5 --max-concurrent-requests 25
+crawl4ai-mcp --help
+crawl4ai-mcp --transport http --host 127.0.0.1 --port 8000
+crawl4ai-mcp --setup
 ```
 
 ### Modern Python Standards
@@ -235,7 +217,7 @@ crawl4ai-mcp serve --max-memory-percent 75 --min-concurrent-requests 5 --max-con
 - **Async-First**: Built on asyncio with proper concurrency patterns
 - **Testing**: Extensive pytest suite with property-based testing
 - **Documentation**: Google-style docstrings with complete type annotations
-- **Dependency Management**: Modern pyproject.toml with optional-dependencies
+- **Dependency Management**: Modern pyproject.toml with uv-managed dependency groups
 
 ## Next Steps
 

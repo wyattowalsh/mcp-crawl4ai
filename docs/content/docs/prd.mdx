@@ -35,8 +35,8 @@ Crawl4AI MCP is a server implementation adhering to the Model Context Protocol (
   </div>
 </div>
 
-<Callout type="info">
-  This document outlines the comprehensive product requirements for Crawl4AI-MCP, serving as the definitive reference for development, testing, and stakeholder alignment.
+<Callout type="warning">
+  Historical/archival note: this PRD is retained for background context and should not be treated as the current implementation contract. For current behavior and supported interfaces, use the live docs, README, and source code.
 </Callout>
 
 ---
@@ -168,13 +168,13 @@ The primary goals for Crawl4AI MCP are:
 *   *Objective 1.4 (Specific):* Support STDIO, HTTP/SSE, and WebSocket transports reliably, verified via E2E tests with simulated clients. **Consider compatibility with emerging MCP transport recommendations (e.g., Streamable HTTP).**
 </Accordion>
 <Accordion title="Goal 2: Expose Comprehensive Crawl4AI Functionality via MCP Tools (Target: V1.0)">
-*   *Objective 2.1 (Specific):* Implement MCP tools (`crawl_url`, `deep_crawl`, `extract_structured_data`, `save_website`, `get_page_metadata`, `generate_knowledge_base`) exposing core Crawl4AI capabilities as defined in [Section 3](#s-3-functional-requirements).
+*   *Objective 2.1 (Specific):* Implement MCP tools (`scrape`, `crawl`, `extract_structured_data`, `save_website`, `get_page_metadata`, `generate_knowledge_base`) exposing core Crawl4AI capabilities as defined in [Section 3](#s-3-functional-requirements).
 *   *Objective 2.2 (Specific):* Ensure tools correctly utilize Crawl4AI's LLM-optimized outputs (**structure-aware Markdown, semantic chunking**) and extraction strategies (CSS, XPath, LLM).
 *   *Objective 2.3 (Relevant):* Maintain compatibility with the latest stable `crawl4ai` library version at the time of V1.0 feature freeze.
 *   *Objective 2.4 (Specific):* Allow configuration of key crawl parameters (e.g., browser usage, selectors, depth, rate limits, **ethical settings**) via MCP tool parameters.
 </Accordion>
 <Accordion title="Goal 3: Enable Seamless LLM Web Interaction & Data Extraction (Target: V1.0)">
-*   *Objective 3.1 (Specific):* Demonstrate successful retrieval and processing of diverse web content (static, dynamic JS) by LLMs (e.g., Claude via Claude Desktop) using the `crawl_url` tool in E2E tests, **leveraging semantically meaningful content representation**.
+*   *Objective 3.1 (Specific):* Demonstrate successful retrieval and processing of diverse web content (static, dynamic JS) by LLMs (e.g., Claude via Claude Desktop) using the `scrape` tool in E2E tests, **leveraging semantically meaningful content representation**.
 *   *Objective 3.2 (Specific, Measurable):* Enable extraction of structured data (JSON) from benchmark websites using CSS/XPath schemas via the `extract_structured_data` tool with >90% accuracy on defined fields.
 *   *Objective 3.3 (Specific):* Allow generation of chunked Markdown knowledge base files **using semantic chunking** suitable for RAG ingestion using the `generate_knowledge_base` tool.
 </Accordion>
@@ -185,7 +185,7 @@ The primary goals for Crawl4AI MCP are:
 *   *Objective 4.4 (Measurable):* Achieve >100 unique installations/downloads and >50 active daily client connections within 3 months post-V1.0 (See [Section 7.1](#s-71-key-performance-indicators-kpis)).
 </Accordion>
 <Accordion title="Goal 5: Establish as a High-Quality, Performant Solution (Target: V1.0)">
-*   *Objective 5.1 (Specific, Measurable, Time-bound):* Complete performance benchmarks (See [Section 7.1](#s-71-key-performance-indicators-kpis)), demonstrating competitive or superior performance (e.g., <5s avg. latency for `crawl_url`) compared to baseline Crawl4AI usage before V1.0 release.
+*   *Objective 5.1 (Specific, Measurable, Time-bound):* Complete performance benchmarks (See [Section 7.1](#s-71-key-performance-indicators-kpis)), demonstrating competitive or superior performance (e.g., <5s avg. latency for `scrape`) compared to baseline Crawl4AI usage before V1.0 release.
 *   *Objective 5.2 (Specific):* Ensure all V1.0 features outlined in the \'In Scope\' section ([1.5.1](#s-151-in-scope)) are implemented and functional.
 *   *Objective 5.3 (Measurable):* Achieve positive qualitative feedback from beta testers and initial users regarding ease of use and reliability, corroborated by usability metrics ([Section 7.1](#s-71-key-performance-indicators-kpis)).
 *   *Objective 5.4 (Specific, Measurable):* Demonstrate adherence to **enhanced ethical crawling practices** (respecting ToS, adaptive rate limits, transparent UA, handling of specific HTTP codes) in benchmark tests and logs. *(New)*
@@ -199,8 +199,8 @@ The primary goals for Crawl4AI MCP are:
 - **Core Crawling Engine:** Integration with `crawl4ai` library as the backend for all web interaction tasks.
 - **Transport Layers:** Support for STDIO, HTTP (with SSE for streaming), and WebSocket transports via `fastmcp`. **Monitor and adapt to potential future MCP standard transport changes (e.g., Streamable HTTP, JSON-RPC batching).**
 - **MCP Tools:** Implementation of the following tools with configurable parameters:
-    - `crawl_url`: Single page fetching, processing, **semantic chunking**, and optional structured extraction.
-    - `deep_crawl`: Recursive crawling with depth/page limits, domain/pattern filtering, and strategy selection (BFS, DFS, BFF).
+    - `scrape`: Single page fetching, processing, **semantic chunking**, and optional structured extraction.
+    - `crawl`: Recursive crawling with depth/page limits, domain/pattern filtering, and strategy selection (BFS, DFS, BFF).
     - `extract_structured_data`: Targeted data extraction using CSS, XPath, or LLM-based schemas.
     - `get_page_metadata`: Fetching metadata (title, description, etc.) without full content processing.
     - `save_website`: Saving crawled content (single, sitemap, or limited crawl) to local files in various formats (**structure-aware MD**, JSON, HTML, TXT) with optional resource downloading.
@@ -255,7 +255,7 @@ The primary goals for Crawl4AI MCP are:
 - *Pain Point:* Ensuring ethical data collection (**respecting robots.txt, ToS, rate limits**, avoiding excessive load) requires manual effort or complex configuration.
 - *Pain Point:* Difficulty processing and cleaning raw HTML into a **semantically meaningful and token-efficient** format suitable for model ingestion.
 
-**Scenario:** Dr. Lee is researching how LLMs summarize breaking news. She needs to feed her model the latest articles from several news sources daily. Using Crawl4AI MCP, she configures a recurring task via an MCP client to crawl specific news sites, **setting appropriate ethical parameters (User-Agent, respectful rate limits)**. The tool extracts the main article content using `crawl_url`, processes it into **semantically chunked, structure-aware markdown**, and returns it suitable for her model's input, significantly speeding up her research cycle.
+**Scenario:** Dr. Lee is researching how LLMs summarize breaking news. She needs to feed her model the latest articles from several news sources daily. Using Crawl4AI MCP, she configures a recurring task via an MCP client to crawl specific news sites, **setting appropriate ethical parameters (User-Agent, respectful rate limits)**. The tool extracts the main article content using `scrape`, processes it into **semantically chunked, structure-aware markdown**, and returns it suitable for her model's input, significantly speeding up her research cycle.
 </Accordion>
 <Accordion title="2.2 AI Application Developers {#s-22-ai-application-developers}">
 **Description:** Software engineers and developers building applications, agents, or services that leverage LLMs. They require their AI components to interact with the live web to provide up-to-date information, perform actions, or complete tasks for end-users.
@@ -336,7 +336,7 @@ The primary goals for Crawl4AI MCP are:
 - *Pain Point:* Copy-pasting from websites into AI prompts is cumbersome.
 - *Pain Point:* AI tools sometimes hallucinate or lack access to the latest web information.
 
-**Scenario:** Alex is a journalist writing an article on renewable energy trends. Using Crawl4AI MCP through his favorite AI assistant, he's able to request a summary of several recent industry reports. The tool crawls the specified URLs **ethically**, extracts the main content using the `crawl_url` tool, filters out boilerplate, **processes it into clean, semantically chunked content**, and provides it to the AI assistant for summarization.
+**Scenario:** Alex is a journalist writing an article on renewable energy trends. Using Crawl4AI MCP through his favorite AI assistant, he's able to request a summary of several recent industry reports. The tool crawls the specified URLs **ethically**, extracts the main content using the `scrape` tool, filters out boilerplate, **processes it into clean, semantically chunked content**, and provides it to the AI assistant for summarization.
 </Accordion>
 </Accordions>
 
@@ -386,7 +386,7 @@ The primary goals for Crawl4AI MCP are:
 </Accordion>
 <Accordion title="2.5.2 Core Use Cases {#s-252-core-use-cases}">
 **UC-01: Single URL Content Extraction**
-1.  User submits a URL through an MCP client using the `crawl_url` tool
+1.  User submits a URL through an MCP client using the `scrape` tool
 2.  MCP server validates the URL and crawling parameters
 3.  Server retrieves the web content, respecting robots.txt and **configured ethical crawling practices (rate limits, User-Agent, ToS check flags)**
 4.  Server processes the HTML, extracting main content, removing boilerplate, **generating structure-aware markdown, and applying semantic chunking**.
@@ -403,7 +403,7 @@ The primary goals for Crawl4AI MCP are:
 
 **UC-03: Deep Crawling and Knowledge Base Creation**
 1.  User specifies a starting URL, crawl depth, and configuration parameters
-2.  User initiates deep crawling via the `deep_crawl` or `generate_knowledge_base` tool
+2.  User initiates deep crawling via the `crawl` or `generate_knowledge_base` tool
 3.  Server begins crawling from the start URL, following links according to specified parameters
 4.  Server provides streaming progress updates to the client
 5.  Server processes and stores content from all crawled pages
@@ -413,7 +413,7 @@ The primary goals for Crawl4AI MCP are:
 **UC-04: Real-time Web Research**
 1.  User asks an AI assistant a question requiring current web information
 2.  AI assistant (via MCP client) identifies relevant URLs to check
-3.  Client requests content from these URLs using the `crawl_url` tool
+3.  Client requests content from these URLs using the `scrape` tool
 4.  Server retrieves and processes the content from each URL **ethically**
 5.  Server returns clean, **semantically relevant** content to the AI assistant
 6.  AI assistant incorporates the web information into its response
@@ -507,7 +507,7 @@ The primary goals for Crawl4AI MCP are:
     -   **Verification Method**: Error injection testing, review of error messages
     -   **Rationale**: Essential for troubleshooting and graceful client-side error handling
 
--   **(FR-MC-008) [P0]** For long-running tools (`deep_crawl`, `batch_crawl`), the system **shall** utilize streaming responses (e.g., via HTTP SSE or multiple WebSocket messages) to provide progress updates or partial results, avoiding client timeouts. **Progress updates should include estimated completion time and number of pages processed/queued.**
+-   **(FR-MC-008) [P0]** For long-running tools (`crawl`, `batch_crawl`), the system **shall** utilize streaming responses (e.g., via HTTP SSE or multiple WebSocket messages) to provide progress updates or partial results, avoiding client timeouts. **Progress updates should include estimated completion time and number of pages processed/queued.**
     -   **Acceptance Criteria**:
         -   Sends progress updates at least every 5 seconds for operations >30s
         -   Provides percentage completion estimates accurate to ±10%
@@ -1046,7 +1046,7 @@ Crawl4AI-MCP is primarily a backend server. Any user interface would likely be p
 
 <Accordions>
 <Accordion title="6.1.1 Technical Performance Metrics {#s-611-technical-performance-metrics}">
-- **Average Tool Response Time:** Measure latency for key tools (`crawl_url`, `extract_structured_data`). *Target: < 5s for `crawl_url` on benchmark sites.*
+- **Average Tool Response Time:** Measure latency for key tools (`scrape`, `extract_structured_data`). *Target: < 5s for `scrape` on benchmark sites.*
 - **Concurrent Request Handling:** Maximum simultaneous MCP requests handled without significant (>20%) latency increase. *Target: 10+ concurrent requests.*
 - **Crawl Success Rate:** Percentage of URLs successfully crawled and processed on a diverse benchmark dataset, **while respecting configured ethical limits**. *Target: > 95%.*
 - **Error Rate:** Percentage of MCP requests resulting in server-side errors (5xx class or internal). *Target: < 0.1% per 1k requests.*
@@ -1095,16 +1095,16 @@ Crawl4AI-MCP is primarily a backend server. Any user interface would likely be p
 
 ### 8.1 Minimum Viable Product (MVP) Criteria {#s-81-minimum-viable-product-mvp-criteria}
 - **MCP Compliance:** Basic MCP server setup, supporting `list_tools` and `call_tool`.
-- **Core Tool:** Functional `crawl_url` tool with **basic** Markdown output.
+- **Core Tool:** Functional `scrape` tool with **basic** Markdown output.
 - **Transport:** Reliable STDIO transport.
 - **Deployment:** Basic `pip install` capability.
 - **Documentation:** `README.md` with quick start and installation guide.
-- **Testing:** Core unit tests for server and `crawl_url` tool.
+- **Testing:** Core unit tests for server and `scrape` tool.
 
 ### 8.2 V1.0 Criteria {#s-82-v10-criteria}
 - **Full MCP Compliance:** Passes MCP Compliance Test Suite v1.4+. All required endpoints and message types implemented.
 - **Transport Layers:** Stable STDIO, HTTP/SSE, and WebSocket support.
-- **Core Tools Implemented:** `crawl_url`, `deep_crawl`, `extract_structured_data`, `get_page_metadata`, `batch_crawl` fully functional as defined in FRs.
+- **Core Tools Implemented:** `scrape`, `crawl`, `extract_structured_data`, `get_page_metadata`, `batch_crawl` fully functional as defined in FRs.
 - **Key Features:** Configurable crawling (depth, rate limits, user agent), structured extraction (CSS/XPath), **structure-aware** Markdown/Text output, basic browser rendering (`javascript_enabled`), caching (`enabled`/`disabled` modes), **basic semantic chunking**.
 - **Deployment:** Reliable `pip install crawl4ai-mcp[all]` and documented Docker image deployment.
 - **Configuration:** Hierarchical configuration system (YAML, Env Vars, CLI) implemented and documented **including basic ethical parameters**.

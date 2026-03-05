@@ -9,10 +9,6 @@ from fastmcp import Client
 
 from crawl4ai_mcp.server import mcp
 
-# ---------------------------------------------------------------------------
-# Mock CrawlResult helpers
-# ---------------------------------------------------------------------------
-
 
 def _make_crawl_result(
     *,
@@ -43,20 +39,17 @@ def _make_crawl_result(
     result.error_message = error_message
     result.depth = depth
 
-    # MarkdownGenerationResult-like object
-    md = MagicMock()
-    md.fit_markdown = markdown_fit
-    md.raw_markdown = markdown_raw
-    result.markdown = md
+    markdown = MagicMock()
+    markdown.fit_markdown = markdown_fit
+    markdown.raw_markdown = markdown_raw
+    result.markdown = markdown
 
     result.links = links or {
         "internal": [
             {"href": "https://example.com/about", "text": "About"},
             {"href": "https://example.com/contact", "text": "Contact"},
         ],
-        "external": [
-            {"href": "https://other.com", "text": "Other Site"},
-        ],
+        "external": [{"href": "https://other.com", "text": "Other Site"}],
     }
     result.media = media or {
         "images": [{"src": "https://example.com/img.png", "alt": "Logo"}],
@@ -68,13 +61,10 @@ def _make_crawl_result(
         "description": "Test page",
         "language": "en",
     }
+    result.console_messages = []
+    result.network_requests = []
 
     return result
-
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -97,13 +87,7 @@ def mock_failed_result():
 
 @pytest.fixture
 async def client(mock_crawl_result):
-    """In-memory fastmcp Client with AsyncWebCrawler fully mocked out.
-
-    The mock crawler's ``arun`` returns *mock_crawl_result* by default.
-    ``arun_many`` returns a list containing the same result for each URL.
-    The fixture yields the client **and** the mock crawler instance so tests
-    can customise return values when needed.
-    """
+    """In-memory FastMCP client with AsyncWebCrawler mocked out."""
     mock_crawler = AsyncMock()
     mock_crawler.arun = AsyncMock(return_value=mock_crawl_result)
     mock_crawler.arun_many = AsyncMock(

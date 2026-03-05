@@ -16,18 +16,17 @@ The Crawl4AI-MCP team takes security vulnerabilities seriously. We appreciate yo
 
 ### Reporting Process
 
-**For critical security vulnerabilities:**
+**For all security vulnerabilities (critical or low severity):**
 
-1. Open a GitHub Issue at [https://github.com/wyattowalsh/crawl4ai-mcp/issues](https://github.com/wyattowalsh/crawl4ai-mcp/issues) with:
+1. Use GitHub private vulnerability reporting: [https://github.com/wyattowalsh/crawl4ai-mcp/security/advisories/new](https://github.com/wyattowalsh/crawl4ai-mcp/security/advisories/new)
+2. Include:
    - A detailed description of the vulnerability
    - Steps to reproduce or proof-of-concept
    - Potential impact of the vulnerability
    - Any suggested mitigations (if you have them)
-2. Use the title prefix: `[SECURITY] Crawl4AI-MCP Vulnerability Report`
+3. **Do not open public GitHub issues for vulnerabilities.**
 
-**For lower-severity security concerns:**
-
-You may use the [Security Issue template](https://github.com/wyattowalsh/crawl4ai-mcp/issues/new?template=security_issue.yml) to report issues that don't pose an immediate significant risk.
+For non-security bugs, use the standard [Bug Report template](https://github.com/wyattowalsh/crawl4ai-mcp/issues/new?template=bug_report.yml).
 
 ### What to expect
 
@@ -76,8 +75,8 @@ Our disclosure policy is as follows:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.2.x   | :white_check_mark: |
-| < 0.2.0 | :x:                |
+| 0.3.x   | :white_check_mark: |
+| < 0.3.0 | :x:                |
 
 We only provide security updates for the latest minor version. Please update to the latest version to ensure you have all security patches.
 

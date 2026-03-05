@@ -23,7 +23,7 @@ Crawl4AI-MCP follows a structured development approach with clear milestones. Be
       status: "completed",
       features: [
         "Basic MCP server with custom SDK implementation",
-        "crawl_url and deep_crawl tools",
+        "Initial scrape/crawl capabilities",
         "STDIO and HTTP/SSE transport support",
         "Configuration via config.yaml",
         "Initial documentation"
@@ -37,7 +37,7 @@ Crawl4AI-MCP follows a structured development approach with clear milestones. Be
       features: [
         "Rewrote server with FastMCP v3",
         "Lifespan-managed AsyncWebCrawler singleton",
-        "8 tools: crawl_url, crawl_many, deep_crawl, extract_data, take_screenshot, get_links, get_page_info, execute_js",
+        "Canonical tool surface: scrape, crawl, close_session, get_artifact",
         "2 resources: config://server, crawl4ai://version",
         "Dependencies reduced from 30+ to 2 (fastmcp, crawl4ai)",
         "Python 3.13+ requirement",
