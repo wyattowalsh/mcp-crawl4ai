@@ -3,6 +3,7 @@
 **Date**: 2026-04-13
 **Scope**: MCP server (`mcp_crawl4ai/server.py`), dependency manifest (`uv.lock`), Docker build (`Dockerfile`), HTTP transport surface.
 **Out of scope**: Crawl4AI library internals, documentation site, fix implementation.
+**Methodology**: Static code analysis + empirical validation (Python REPL). Findings tagged `[reproduced]` were empirically tested; `[static-analysis]` were identified via code review; `[theoretical]` are plausible but unconfirmed.
 
 ---
 
@@ -20,7 +21,7 @@
 
 ## Critical
 
-### SEC-C01: `execute_js` — Unrestricted arbitrary JavaScript execution in a real browser
+### SEC-C01: `execute_js` — Unrestricted arbitrary JavaScript execution in a real browser `[static-analysis]`
 
 **Location**: `server.py:3685–3786`
 
@@ -43,7 +44,7 @@ The `execute_js` tool accepts arbitrary JavaScript from any MCP client and execu
 3. Consider a JS allowlist or sandboxed evaluation context.
 4. Log all JS execution with the full code payload for audit trails.
 
-### SEC-C02: HTTP transport has zero authentication
+### SEC-C02: HTTP transport has zero authentication `[reproduced]`
 
 **Location**: `server.py:4085–4092`, `Dockerfile:47`
 
@@ -66,7 +67,7 @@ The HTTP transport (`--transport http`) has no authentication mechanism:
 
 ## High
 
-### SEC-H01: SSRF — DNS rebinding TOCTOU window (from server audit H-02)
+### SEC-H01: SSRF — DNS rebinding TOCTOU window (from server audit H-02) `[static-analysis]`
 
 **Location**: `server.py:365–399`
 
@@ -84,7 +85,7 @@ The HTTP transport (`--transport http`) has no authentication mechanism:
 2. Alternatively, validate the *response* URL after navigation and abort if it points to a private IP.
 3. Use a DNS resolver that pins results (e.g., a local DNS proxy with rebind protection).
 
-### SEC-H02: SSRF — DNS resolution failure silently passes through
+### SEC-H02: SSRF — DNS resolution failure silently passes through `[reproduced]`
 
 **Location**: `server.py:387–388`
 
@@ -99,7 +100,7 @@ except OSError:  # AUDIT: M-02
 
 **Remediation**: Reject URLs where DNS resolution fails. An unresolvable hostname should be an error, not a pass.
 
-### SEC-H03: Deep crawl discovered URLs bypass SSRF validation (from server audit H-03)
+### SEC-H03: Deep crawl discovered URLs bypass SSRF validation (from server audit H-03) `[static-analysis]`
 
 **Location**: `server.py:2460`, `_build_deep_crawl_strategy`
 
@@ -111,7 +112,7 @@ except OSError:  # AUDIT: M-02
 1. Implement a URL filter callback that applies `_validate_url` to every discovered URL before crawling.
 2. Pass the filter to `URLPatternFilter` or wrap the deep crawl strategy.
 
-### SEC-H04: `socket.getaddrinfo` blocks the async event loop (from server audit H-04)
+### SEC-H04: `socket.getaddrinfo` blocks the async event loop (from server audit H-04) `[reproduced]`
 
 **Location**: `server.py:386`
 
@@ -173,7 +174,7 @@ The function recurses into nested dicts/lists without a depth limit. A crafted a
 
 **Remediation**: Add a `max_depth` parameter (default: 20) and return a placeholder at depth limit.
 
-### SEC-M05: `_next_opaque_artifact_id` — theoretical infinite loop
+### SEC-M05: `_next_opaque_artifact_id` — theoretical infinite loop `[theoretical]`
 
 **Location**: `server.py:1412–1418`
 
@@ -337,6 +338,24 @@ The `wait_for` parameter accepts both CSS selectors (e.g., `.loaded`) and JavaSc
 | aiohttp | 3.11.16 | Async HTTP (transitive) | Historically frequent CVEs; check GHSA for 3.11.x advisories. |
 | beautifulsoup4 | 4.13.3 | HTML parsing (via crawl4ai) | No critical CVEs. |
 | authlib | 1.6.8 | Auth library (transitive) | Not directly used by server. |
+
+### Automated scan results
+
+**Tool**: `pip-audit 2.10.0` — scanned installed packages against OSV/PyPI advisory database.
+**Date**: 2026-04-13
+
+```
+Found 1 known vulnerability in 1 package
+Name Version ID            Fix Versions
+---- ------- ------------- ------------
+pip  25.3    CVE-2026-1703 26.0
+
+Skipped: setuptools 80.9.0.post0 (not found on PyPI)
+```
+
+**Result**: 1 vulnerability found in `pip` (build tool only, not a runtime dependency). All runtime dependencies (`crawl4ai`, `fastmcp`, `pydantic`, `pydantic-settings`, `patchright`, `uvicorn`, `starlette`, `httpx`, `aiohttp`, `beautifulsoup4`) have **zero known CVEs** per OSV database.
+
+**Action**: Update `pip` in the build venv. No runtime impact.
 
 ### Supply chain considerations
 
