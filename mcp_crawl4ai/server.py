@@ -1801,7 +1801,15 @@ def _sanitize_diagnostic_url(url: Any) -> str | None:
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
         return None
-    safe_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path or ''}"
+
+    # Sentinel: 🛡️ Security Fix
+    # Do not use parsed.netloc directly as it includes basic auth credentials.
+    # Use hostname and port to strip out any potential username/password leak.
+    netloc = parsed.hostname or ""
+    if parsed.port:
+        netloc = f"{netloc}:{parsed.port}"
+
+    safe_url = f"{parsed.scheme}://{netloc}{parsed.path or ''}"
     return safe_url[:DIAGNOSTIC_URL_MAX_CHARS]
 
 
