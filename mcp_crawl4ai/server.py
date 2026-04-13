@@ -1806,8 +1806,16 @@ def _sanitize_diagnostic_url(url: Any) -> str | None:
     # Do not use parsed.netloc directly as it includes basic auth credentials.
     # Use hostname and port to strip out any potential username/password leak.
     netloc = parsed.hostname or ""
-    if parsed.port:
-        netloc = f"{netloc}:{parsed.port}"
+
+    # Re-wrap IPv6 addresses in brackets
+    if ":" in netloc and not netloc.startswith("["):
+        netloc = f"[{netloc}]"
+
+    try:
+        if parsed.port:
+            netloc = f"{netloc}:{parsed.port}"
+    except ValueError:
+        pass  # Ignore invalid ports
 
     safe_url = f"{parsed.scheme}://{netloc}{parsed.path or ''}"
     return safe_url[:DIAGNOSTIC_URL_MAX_CHARS]
