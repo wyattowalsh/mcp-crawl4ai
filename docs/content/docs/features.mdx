@@ -94,16 +94,16 @@ MCP-Crawl4AI offers a comprehensive set of features designed to simplify web cra
 
     ```bash
     # Start the server with stdio transport (default)
-    mcp-crawl4ai
+    uv run mcp-crawl4ai
     ```
   </Tab>
 
   <Tab value="HTTP">
-    **HTTP transport** allows for network-based communication. It is ideal for distributed setups where the client and server are on different machines.
+    **HTTP transport** listens on loopback by default. Another machine needs an explicit `--host` and a reverse proxy. The endpoint is `http://127.0.0.1:8000/mcp`.
 
     ```bash
     # Start the server with HTTP transport
-    mcp-crawl4ai --transport http --host 127.0.0.1 --port 8000
+    uv run mcp-crawl4ai --transport http --host 127.0.0.1 --port 8000
     ```
   </Tab>
 </Tabs>

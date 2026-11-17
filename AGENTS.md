@@ -71,7 +71,7 @@ uv run pre-commit run --all-files
 docker build -t mcp-crawl4ai .
 
 # Run via Docker (HTTP transport)
-docker run -p 8000:8000 mcp-crawl4ai
+docker run -p 8000:8000 mcp-crawl4ai --host 0.0.0.0
 ```
 
 ## Architecture
