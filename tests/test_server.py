@@ -274,10 +274,10 @@ class TestScrape:
         )
 
         arun_kwargs = mock_crawler.arun.await_args.kwargs
-        assert arun_kwargs["timeout_ms"] == 30_000
-        assert arun_kwargs["max_retries"] == 2
-        assert arun_kwargs["retry_backoff_ms"] == 200
-        assert arun_kwargs["max_content_chars"] == 4096
+        assert "timeout_ms" not in arun_kwargs
+        assert "max_retries" not in arun_kwargs
+        assert arun_kwargs["config"].page_timeout == 30_000
+        assert mock_crawler.arun.await_count == 1
 
     async def test_scrape_capture_artifacts_requires_session_id(self, client):
         c, _ = client
@@ -1071,9 +1071,12 @@ class TestLifespanAutoSetupFailures:
         mock_crawler.close = AsyncMock()
 
         with patch("mcp_crawl4ai.server.AsyncWebCrawler", return_value=mock_crawler):
-            with pytest.raises(OSError, match="disk full"):
+            with pytest.raises(
+                RuntimeError, match=r"Client failed to connect: disk full"
+            ) as raised:
                 async with Client(mcp):
                     pass
+        assert isinstance(raised.value.__cause__, OSError)
 
 
 # ---------------------------------------------------------------------------
@@ -1082,8 +1085,9 @@ class TestLifespanAutoSetupFailures:
 
 
 class TestTruncationJSONValidity:
-    @pytest.mark.xfail(reason="Characterization test: server audit H-01 — _truncate corrupts JSON envelopes; remove xfail when fix lands", strict=True)
-    async def test_envelope_truncation_produces_invalid_json(self, client, mock_crawl_result):
+    async def test_envelope_truncation_stays_valid_json_within_budget(
+        self, client, mock_crawl_result
+    ):
         c, mock_crawler = client
         long_markdown = MagicMock()
         long_markdown.fit_markdown = "X" * (MAX_RESPONSE_CHARS + 50_000)
@@ -1093,13 +1097,17 @@ class TestTruncationJSONValidity:
 
         result = await c.call_tool("scrape", {"targets": "https://example.com"})
         text = result.content[0].text if hasattr(result, "content") else str(result)
-        with pytest.raises(json.JSONDecodeError):
-            json.loads(text)
+        payload = json.loads(text)
+        assert len(text) <= MAX_RESPONSE_CHARS
+        assert payload["tool"] == "scrape"
+        assert any("content truncated" in str(item).lower() for item in payload["warnings"])
 
-    def test_truncate_notice_exceeds_max_chars(self):
+    def test_truncate_notice_stays_within_max_chars(self):
         content = "A" * (MAX_RESPONSE_CHARS + 1000)
         truncated = _truncate(content)
-        assert len(truncated) > MAX_RESPONSE_CHARS
+        assert len(truncated) <= MAX_RESPONSE_CHARS
+        assert "truncated" in truncated.lower()
+        assert str(len(content)) in truncated
 
     def test_truncate_at_exact_boundary_returns_unmodified(self):
         content = "B" * MAX_RESPONSE_CHARS
@@ -1109,7 +1117,8 @@ class TestTruncationJSONValidity:
         content = "C" * (MAX_RESPONSE_CHARS + 1)
         truncated = _truncate(content)
         assert "truncated" in truncated.lower()
-        assert len(truncated) > MAX_RESPONSE_CHARS
+        assert len(truncated) <= MAX_RESPONSE_CHARS
+        assert str(len(content)) in truncated
 
 
 # ---------------------------------------------------------------------------
@@ -1130,12 +1139,21 @@ class TestSSRFEdgeCases:
             with pytest.raises(ToolError, match="Private/loopback"):
                 _validate_url("http://metadata.internal/latest")
 
-    def test_dns_resolution_failure_silent_passthrough(self):
+    def test_dns_resolution_failure_is_rejected(self):
         with patch(
             "mcp_crawl4ai.server.socket.getaddrinfo",
             side_effect=OSError("DNS failed"),
         ):
-            _validate_url("http://unresolvable-host.invalid/path")
+            with pytest.raises(ToolError, match="Unable to resolve"):
+                _validate_url("http://unresolvable-host.invalid/path")
+
+    def test_backslash_in_url_is_rejected(self):
+        with pytest.raises(ToolError, match="Invalid URL"):
+            _validate_url("http://example.com\\path")
+
+    def test_multicast_literal_is_rejected(self):
+        with pytest.raises(ToolError, match="Private/loopback"):
+            _validate_url("http://224.0.0.1/")
 
     def test_ipv6_private_fc00_blocked(self):
         with patch(

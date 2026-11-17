@@ -13,7 +13,7 @@ MCP-Crawl4AI is a Model Context Protocol server that gives AI systems access to 
 - Session lifecycle support with `close_session`
 - Artifact retrieval with `get_artifact`
 - Stdio and HTTP transports
-- Markdown, HTML, raw HTML, and text outputs
+- Markdown, HTML, cleaned HTML, and text outputs
 
 ## Install
 
@@ -28,14 +28,14 @@ mcp-crawl4ai --setup
 
 ```bash
 uv add mcp-crawl4ai
-mcp-crawl4ai --setup
+uv run mcp-crawl4ai --setup
 ```
 
 ### Docker
 
 ```bash
 docker build -t mcp-crawl4ai .
-docker run -p 8000:8000 mcp-crawl4ai
+docker run -p 8000:8000 mcp-crawl4ai --host 0.0.0.0
 ```
 
 ## Run
@@ -43,14 +43,16 @@ docker run -p 8000:8000 mcp-crawl4ai
 ### stdio
 
 ```bash
-mcp-crawl4ai
+uv run mcp-crawl4ai
 ```
 
 ### HTTP
 
 ```bash
-mcp-crawl4ai --transport http --port 8000
+uv run mcp-crawl4ai --transport http --port 8000
 ```
+
+The endpoint is `http://127.0.0.1:8000/mcp`.
 
 ## Learn more
 

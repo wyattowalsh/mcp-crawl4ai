@@ -43,7 +43,7 @@ MCP-Crawl4AI bridges Crawl4AI's web crawling with the Model Context Protocol (MC
 - Clean content extraction (HTML to Markdown/Text)
 - JavaScript rendering support
 - MCP-compliant API
-- Authenticated site access
+- Session-aware crawling and artifact retrieval
 
 For detailed information, see our [documentation site](https://wyattowalsh.github.io/mcp-crawl4ai/).
 
@@ -88,14 +88,14 @@ We welcome improvements to user guides, API documentation, tutorials, and code c
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR-USERNAME/MCP-Crawl4AI.git
+git clone https://github.com/YOUR-USERNAME/mcp-crawl4ai.git
 cd mcp-crawl4ai
 
 # Install dependencies
 uv sync
 
 # Install browser (first time)
-mcp-crawl4ai --setup
+uv run mcp-crawl4ai --setup
 
 # Run tests
 uv run pytest
@@ -168,7 +168,7 @@ When implementing or modifying MCP features, always refer to the [**MCP Specific
 
 ### Resource Implementation Checklist
 
-- [ ] **URI Structure:** Use `crawl://` scheme consistently
+- [ ] **URI Structure:** Use `config://server` and `crawl4ai://version`
 - [ ] **Lifecycle Management:** Handle creation and cleanup
 - [ ] **Access Control:** Implement appropriate controls
 - [ ] **Metadata:** Include timestamps and metadata

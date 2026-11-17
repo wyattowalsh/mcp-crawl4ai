@@ -16,7 +16,7 @@ AI agent instructions for this project.
 
 | File | Purpose |
 |------|---------|
-| `mcp_crawl4ai/server.py` | **All** server logic -- 11 tools, 2 resources, 3 prompts, lifespan, auto-setup |
+| `mcp_crawl4ai/server.py` | **All** server logic -- 4 tools, 2 resources, 3 prompts, lifespan, auto-setup |
 | `mcp_crawl4ai/__init__.py` | Package version via `importlib.metadata` |
 | `pyproject.toml` | Project config, dependencies, tool config |
 | `tests/conftest.py` | Test fixtures (mock crawler, client) |
@@ -37,13 +37,13 @@ AI agent instructions for this project.
 uv sync
 
 # Install browser (first time -- or use mcp-crawl4ai --setup)
-mcp-crawl4ai --setup
+uv run mcp-crawl4ai --setup
 
 # Run (stdio -- default for Claude Desktop / MCP clients)
-mcp-crawl4ai
+uv run mcp-crawl4ai
 
-# Run (HTTP -- defaults to 127.0.0.1; set --host explicitly for external exposure)
-mcp-crawl4ai --transport http --port 8000
+# Run (HTTP -- defaults to 127.0.0.1:8000/mcp; set --host explicitly for external exposure)
+uv run mcp-crawl4ai --transport http --port 8000
 
 # Tests
 uv run pytest
@@ -71,7 +71,7 @@ uv run pre-commit run --all-files
 docker build -t mcp-crawl4ai .
 
 # Run via Docker (HTTP transport)
-docker run -p 8000:8000 mcp-crawl4ai
+docker run -p 8000:8000 mcp-crawl4ai --host 0.0.0.0
 ```
 
 ## Architecture
@@ -117,7 +117,7 @@ FastMCP("crawl4ai")
 Tests use `fastmcp.Client(mcp)` for in-memory testing -- no browser or network required.
 The conftest patches `AsyncWebCrawler` with `AsyncMock`. All tests should pass in <60s.
 PyPI package name: `mcp-crawl4ai` (CLI command: `mcp-crawl4ai`).
-Coverage threshold: 90% (currently ~98%). Markers: `unit`, `smoke`, `integration`, `e2e`.
+Coverage threshold: 90%. Markers: `unit`, `smoke`, `integration`, `e2e`.
 
 ## What NOT to Do
 
