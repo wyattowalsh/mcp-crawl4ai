@@ -43,7 +43,7 @@ When using MCP-Crawl4AI, please consider the following security recommendations:
 
 1. **Respect Terms of Service:** Ensure your crawling activities comply with the terms of service of the websites you crawl.
 2. **Rate Limiting:** Configure appropriate rate limiting to avoid overwhelming target websites.
-3. **Robots.txt:** Respect robots.txt directives by enabling the `respect_robots_txt` configuration option.
+3. **Robots.txt:** This server does not apply a robots.txt option. Check a site's terms before crawling it.
 4. **User-Agent Identification:** Use an identifiable user-agent that allows site owners to contact you if needed.
 
 ### Server Security

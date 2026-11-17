@@ -44,4 +44,4 @@ EXPOSE 8000
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["uv", "run", "mcp-crawl4ai", "--transport", "http", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["uv", "run", "mcp-crawl4ai", "--transport", "http", "--port", "8000"]

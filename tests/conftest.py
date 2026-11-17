@@ -85,6 +85,11 @@ def mock_failed_result():
     )
 
 
+def _public_getaddrinfo(host, port, *args, **kwargs):
+    """Resolve every test hostname to a public address."""
+    return [(2, 1, 6, "", ("93.184.216.34", port or 80))]
+
+
 @pytest.fixture
 async def client(mock_crawl_result):
     """In-memory FastMCP client with AsyncWebCrawler mocked out."""
@@ -96,6 +101,9 @@ async def client(mock_crawl_result):
     mock_crawler.start = AsyncMock()
     mock_crawler.close = AsyncMock()
 
-    with patch("mcp_crawl4ai.server.AsyncWebCrawler", return_value=mock_crawler):
+    with (
+        patch("mcp_crawl4ai.server.AsyncWebCrawler", return_value=mock_crawler),
+        patch("mcp_crawl4ai.server.socket.getaddrinfo", side_effect=_public_getaddrinfo),
+    ):
         async with Client(mcp) as c:
             yield c, mock_crawler

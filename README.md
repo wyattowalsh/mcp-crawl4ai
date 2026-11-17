@@ -37,7 +37,7 @@
 
 **MCP-Crawl4AI** is a [Model Context Protocol](https://modelcontextprotocol.io) server that gives AI systems access to the live web. Built on [FastMCP v3](https://github.com/jlowin/fastmcp) and [Crawl4AI](https://github.com/unclecode/crawl4ai), it exposes **4 tools**, **2 resources**, and **3 prompts** through the standardized MCP interface, backed by a lifespan-managed headless Chromium browser.
 
-**Only 2 runtime dependencies** &mdash; `fastmcp` and `crawl4ai`.
+**3 runtime dependencies** &mdash; `fastmcp`, `crawl4ai`, and `pydantic-settings`.
 
 > [!TIP]
 > **[Full documentation site &rarr;](https://mcp-crawl4ai.w4w.dev)**
@@ -75,7 +75,7 @@ mcp-crawl4ai --setup       # one-time: installs Playwright browsers
 
 ```bash
 uv add mcp-crawl4ai
-mcp-crawl4ai --setup       # one-time: installs Playwright browsers
+uv run mcp-crawl4ai --setup       # one-time: installs Playwright browsers
 ```
 
 </details>
@@ -85,10 +85,10 @@ mcp-crawl4ai --setup       # one-time: installs Playwright browsers
 
 ```bash
 docker build -t mcp-crawl4ai .
-docker run -p 8000:8000 mcp-crawl4ai
+docker run -p 8000:8000 mcp-crawl4ai --host 0.0.0.0
 ```
 
-The Docker image includes Playwright browsers &mdash; no separate setup needed.
+The image binds `127.0.0.1` unless you pass `--host`. Publishing the port to other machines needs `--host 0.0.0.0`. The MCP endpoint is `http://127.0.0.1:8000/mcp`. The image includes Playwright browsers.
 
 </details>
 
@@ -99,13 +99,13 @@ The Docker image includes Playwright browsers &mdash; no separate setup needed.
 git clone https://github.com/wyattowalsh/mcp-crawl4ai.git
 cd mcp-crawl4ai
 uv sync --group dev
-mcp-crawl4ai --setup
+uv run mcp-crawl4ai --setup
 ```
 
 </details>
 
 > [!NOTE]
-> The server auto-detects missing Playwright browsers on first startup and attempts to install them automatically. You can also run `mcp-crawl4ai --setup` or `crawl4ai-setup` manually at any time.
+> The server auto-detects missing Playwright browsers on first startup and attempts to install them automatically. From a checkout, run `uv run mcp-crawl4ai --setup` or `uv run crawl4ai-setup`.
 
 ---
 
@@ -115,7 +115,7 @@ mcp-crawl4ai --setup
 <summary><strong>stdio (default &mdash; for Claude Desktop, Cursor, etc.)</strong></summary>
 
 ```bash
-mcp-crawl4ai
+uv run mcp-crawl4ai
 ```
 
 </details>
@@ -124,11 +124,11 @@ mcp-crawl4ai
 <summary><strong>HTTP transport</strong></summary>
 
 ```bash
-mcp-crawl4ai --transport http --port 8000
+uv run mcp-crawl4ai --transport http --port 8000
 ```
 
 > [!NOTE]
-> HTTP binds to `127.0.0.1` by default (private/local only); for external exposure, set `--host` explicitly and use a reverse proxy for TLS/auth.
+> HTTP binds to `127.0.0.1` by default. The endpoint is `http://127.0.0.1:8000/mcp`. For external exposure, set `--host` explicitly and use a reverse proxy for TLS and authentication.
 
 </details>
 
@@ -273,7 +273,7 @@ The server uses a single-module architecture:
 <details>
 <summary><strong>Environment variables</strong></summary>
 
-No environment variables are required. The server uses sensible defaults for all configuration. Crawl4AI's own environment variables (e.g., `CRAWL4AI_VERBOSE`) are respected if set.
+No environment variables are required to start. Optional settings use the `MCP_CRAWL4AI_` prefix and `__` between nested names, for example `MCP_CRAWL4AI_DEFAULTS__MAX_RESPONSE_CHARS`. Crawl4AI's own environment variables (e.g., `CRAWL4AI_VERBOSE`) are respected if set.
 
 </details>
 

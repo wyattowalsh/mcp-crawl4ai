@@ -10,6 +10,7 @@ for efficient browser reuse.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import base64
 import ipaddress
 import json
@@ -37,6 +38,7 @@ from crawl4ai import (
     SemaphoreDispatcher,
     URLPatternFilter,
 )
+from crawl4ai.deep_crawling.filters import URLFilter
 from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.prompts import Message
@@ -192,14 +194,18 @@ def _get_settings(ctx: Context | None = None) -> ServerSettings:
     return _load_settings()
 
 
-def _get_max_response_chars() -> int:  # AUDIT: M-07 — ignores lifespan ctx; always uses process-level settings cache
+def _get_max_response_chars() -> (
+    int
+):  # AUDIT: M-07 — ignores lifespan ctx; always uses process-level settings cache
     """Resolve the default response truncation limit."""
     configured = _get_settings().defaults.max_response_chars
     resolved = MAX_RESPONSE_CHARS if configured is None else configured
     return max(1, resolved)
 
 
-def _get_batch_item_chars() -> int:  # AUDIT: M-07 — ignores lifespan ctx; always uses process-level settings cache
+def _get_batch_item_chars() -> (
+    int
+):  # AUDIT: M-07 — ignores lifespan ctx; always uses process-level settings cache
     """Resolve the default per-item truncation limit."""
     configured = _get_settings().defaults.batch_item_chars
     resolved = BATCH_ITEM_CHARS if configured is None else configured
@@ -263,6 +269,16 @@ _PRIVATE_NETS = [
     ipaddress.ip_network("::1/128"),
     ipaddress.ip_network("fc00::/7"),
 ]
+_NAT64_NETS = [
+    ipaddress.ip_network("64:ff9b::/96"),
+    ipaddress.ip_network("64:ff9b:1::/48"),
+]
+_CAPTURE_FLAG_FIELDS = {
+    "mhtml": "capture_mhtml",
+    "pdf": "pdf",
+    "console": "capture_console_messages",
+    "network": "capture_network_requests",
+}
 
 # ---------------------------------------------------------------------------
 # Lifespan — manages the shared AsyncWebCrawler singleton
@@ -279,7 +295,9 @@ async def crawler_lifespan(server: Any) -> AsyncGenerator[dict[str, Any], None]:
         verbose=False,
     )
     crawler = AsyncWebCrawler(config=browser_config)
-    session_registry: dict[str, dict[str, int | float]] = {}  # AUDIT: M-08 — no max session count; unbounded memory growth
+    session_registry: dict[
+        str, dict[str, int | float]
+    ] = {}  # AUDIT: M-08 — no max session count; unbounded memory growth
     artifact_store: dict[str, Any] = {
         "artifacts": {},
         "runs": {},
@@ -350,53 +368,191 @@ mcp = FastMCP(
 # ---------------------------------------------------------------------------
 
 
-def _truncate(content: str, max_chars: int | None = None) -> str:  # AUDIT: H-01 — truncating serialized JSON envelopes here produces invalid JSON; notice also exceeds max_chars budget
-    """Truncate *content* if it exceeds *max_chars*, appending a notice."""
-    bounded_max_chars = _get_max_response_chars() if max_chars is None else max_chars
-    if len(content) <= bounded_max_chars:
+def _truncate(content: str, max_chars: int | None = None) -> str:
+    """Truncate *content* to *max_chars*, keeping the notice inside the budget.
+
+    Plain text keeps a prefix plus the truncation notice. JSON objects and
+    arrays stay valid: the notice is stored in the document and long strings
+    are shortened until the serialized form fits.
+    """
+    limit = _get_max_response_chars() if max_chars is None else max_chars
+    if limit < 1:
+        return ""
+    if len(content) <= limit:
         return content
-    return (
-        content[:bounded_max_chars]
-        + f"\n\n[Content truncated at {bounded_max_chars} characters. "
-        + f"Total length: {len(content)} characters.]"
+
+    notice = f"[Content truncated at {limit} characters. Total length: {len(content)} characters.]"
+    parsed = _parse_json_container(content)
+    if parsed is not None:
+        return _fit_json_with_notice(parsed, limit, notice)
+
+    suffix = f"\n\n{notice}"
+    if len(suffix) >= limit:
+        return suffix[:limit]
+    return content[: limit - len(suffix)] + suffix
+
+
+def _parse_json_container(content: str) -> Any | None:
+    """Return a JSON object or array, or None when *content* is not one."""
+    stripped = content.lstrip()
+    if not stripped.startswith(("{", "[")):
+        return None
+    try:
+        parsed = json.loads(content)
+    except json.JSONDecodeError:
+        return None
+    if isinstance(parsed, (dict, list)):
+        return parsed
+    return None
+
+
+def _fit_json_with_notice(parsed: Any, limit: int, notice: str) -> str:
+    """Serialize *parsed* with *notice* inside, never exceeding *limit*."""
+    document = _attach_truncation_notice(parsed, notice)
+    rendered = json.dumps(document, indent=2)
+    seen: set[int] = set()
+    while len(rendered) > limit:
+        if len(rendered) in seen:
+            return _minimal_truncated_json(notice, limit)
+        seen.add(len(rendered))
+        if not _shrink_longest_string(document, notice, len(rendered) - limit):
+            return _minimal_truncated_json(notice, limit)
+        rendered = json.dumps(document, indent=2)
+    return rendered
+
+
+def _attach_truncation_notice(parsed: Any, notice: str) -> Any:
+    """Record *notice* on an object, or wrap a list so the notice stays inside."""
+    if isinstance(parsed, dict):
+        warnings = parsed.get("warnings")
+        if isinstance(warnings, list):
+            warnings.append(notice)
+        else:
+            parsed["truncation_notice"] = notice
+        return parsed
+    return {"truncated": True, "notice": notice, "items": parsed}
+
+
+def _shrink_longest_string(node: Any, notice: str, remove: int) -> bool:
+    """Shorten the longest string other than *notice*. Return False if none."""
+    best_parent: Any = None
+    best_key: Any = None
+    best_len = 0
+
+    def walk(obj: Any) -> None:
+        nonlocal best_parent, best_key, best_len
+        pairs = (
+            obj.items()
+            if isinstance(obj, dict)
+            else enumerate(obj)
+            if isinstance(obj, list)
+            else ()
+        )
+        for key, value in pairs:
+            if isinstance(value, str):
+                if value != notice and len(value) > best_len:
+                    best_parent = obj
+                    best_key = key
+                    best_len = len(value)
+            elif isinstance(value, (dict, list)):
+                walk(value)
+
+    walk(node)
+    if best_parent is None or best_len == 0:
+        return False
+    best_parent[best_key] = best_parent[best_key][: max(0, best_len - max(remove, 1))]
+    return True
+
+
+def _minimal_truncated_json(notice: str, limit: int) -> str:
+    """Last-resort valid JSON document containing as much of *notice* as fits."""
+    text = notice
+    while text:
+        rendered = json.dumps({"truncated": True, "notice": text}, indent=2)
+        if len(rendered) <= limit:
+            return rendered
+        overflow = len(rendered) - limit
+        text = text[:-overflow] if overflow < len(text) else ""
+    rendered = json.dumps({"truncated": True}, indent=2)
+    if len(rendered) <= limit:
+        return rendered
+    return "{}" if limit >= 2 else ""
+
+
+def _is_disallowed_address(raw_host: str) -> bool:
+    """Return True when *raw_host* is not a public unicast address."""
+    host_value = raw_host.split("%", 1)[0]
+    addr = ipaddress.ip_address(host_value)
+    mapped = getattr(addr, "ipv4_mapped", None)
+    if mapped is not None:
+        addr = mapped
+    if any(addr in net for net in (*_PRIVATE_NETS, *_NAT64_NETS)):
+        return True
+    site_local = bool(getattr(addr, "is_site_local", False))
+    return bool(
+        addr.is_multicast
+        or site_local
+        or addr.is_loopback
+        or addr.is_link_local
+        or addr.is_reserved
+        or addr.is_unspecified
+        or addr.is_private
+        or not addr.is_global
     )
 
 
-def _validate_url(url: str) -> None:  # AUDIT: H-02 — SSRF TOCTOU via DNS rebinding; H-04 — socket.getaddrinfo blocks the async event loop
-    """Raise ``ToolError`` if *url* is not a valid HTTP(S) URL."""
+def _validate_url(url: str) -> None:
+    """Raise ``ToolError`` if *url* is not a public HTTP(S) URL."""
+    if not isinstance(url, str) or not url or "\\" in url or any(ord(char) < 33 for char in url):
+        raise ToolError(f"Invalid URL: {url!r}. Only http and https URLs are supported.")
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
         raise ToolError(f"Invalid URL: {url!r}. Only http and https URLs are supported.")
-    # T09 — SSRF protection: block private/loopback IPs
     hostname = parsed.hostname or ""
+    if not hostname or "\\" in hostname or "@" in hostname:
+        raise ToolError(f"Invalid URL: {url!r}. Only http and https URLs are supported.")
     normalized_hostname = hostname.rstrip(".").lower()
     if normalized_hostname == "localhost" or normalized_hostname.endswith(".localhost"):
         raise ToolError(f"Private/loopback URLs are not allowed: {url!r}")
 
-    def _is_disallowed_address(raw_host: str) -> bool:
-        host_value = raw_host.split("%", 1)[0]
-        addr = ipaddress.ip_address(host_value)
-        return any(addr in net for net in _PRIVATE_NETS) or not addr.is_global
-
     try:
         if _is_disallowed_address(hostname):
             raise ToolError(f"Private/loopback URLs are not allowed: {url!r}")
+        return
     except ValueError:
+        pass
+
+    try:
+        resolved_addrs = socket.getaddrinfo(hostname, None)
+    except OSError as exc:
+        raise ToolError(f"Unable to resolve URL host: {hostname!r}.") from exc
+
+    saw_address = False
+    for resolved in resolved_addrs:
+        sockaddr = resolved[4]
+        if not isinstance(sockaddr, tuple) or not sockaddr:
+            continue
+        resolved_host = sockaddr[0]
+        if not isinstance(resolved_host, str):
+            continue
         try:
-            resolved_addrs = socket.getaddrinfo(hostname, None)
-        except OSError:  # AUDIT: M-02 — silent pass-through on DNS resolution failure allows unresolvable hostnames
-            return
-        for resolved in resolved_addrs:
-            sockaddr = resolved[4]
-            if not isinstance(sockaddr, tuple) or not sockaddr:
-                continue
-            resolved_host = sockaddr[0]
-            if isinstance(resolved_host, str):
-                try:
-                    if _is_disallowed_address(resolved_host):
-                        raise ToolError(f"Private/loopback URLs are not allowed: {url!r}")
-                except ValueError:
-                    continue
+            disallowed = _is_disallowed_address(resolved_host)
+        except ValueError:
+            continue
+        saw_address = True
+        if disallowed:
+            raise ToolError(f"Private/loopback URLs are not allowed: {url!r}")
+    if not saw_address:
+        raise ToolError(f"Unable to resolve URL host: {hostname!r}.")
+
+
+def _result_url_allowed(url: str) -> bool:
+    """Return True when a fetched URL still passes the public-address check."""
+    try:
+        _validate_url(url)
+    except ToolError:
+        return False
+    return True
 
 
 def _is_loopback_bind_host(host: str) -> bool:
@@ -1362,7 +1518,9 @@ def _is_sensitive_artifact_key(key: str) -> bool:
     )
 
 
-def _sanitize_artifact_value(value: Any, *, field_name: str | None = None) -> Any:  # AUDIT: M-04 — unbounded recursion; deeply nested payloads can hit recursion limit
+def _sanitize_artifact_value(
+    value: Any, *, field_name: str | None = None
+) -> Any:  # AUDIT: M-04 — unbounded recursion; deeply nested payloads can hit recursion limit
     """Recursively sanitize and bound artifact payload values."""
     if isinstance(value, dict):
         sanitized: dict[str, Any] = {}
@@ -1409,7 +1567,9 @@ def _next_artifact_store_id(
     return f"{prefix}-{index:08d}"
 
 
-def _next_opaque_artifact_id(artifact_store: dict[str, Any]) -> str:  # AUDIT: M-05 — while True loop has no termination guard
+def _next_opaque_artifact_id(
+    artifact_store: dict[str, Any],
+) -> str:  # AUDIT: M-05 — while True loop has no termination guard
     """Generate a non-enumerable artifact identifier."""
     artifacts = artifact_store.get("artifacts")
     while True:
@@ -1763,7 +1923,9 @@ def _extract_markdown(result: Any) -> str:
     Handles both plain ``str`` and ``MarkdownGenerationResult`` objects,
     preferring ``fit_markdown`` when available.
     """
-    md = result.markdown  # AUDIT: M-06 — direct attribute access; use getattr for safety against API changes
+    md = (
+        result.markdown
+    )  # AUDIT: M-06 — direct attribute access; use getattr for safety against API changes
     if md is None:
         return result.cleaned_html or result.html or ""
     if hasattr(md, "fit_markdown") and md.fit_markdown:
@@ -1779,9 +1941,11 @@ def _extract_markdown(result: Any) -> str:
 _FORMAT_DISPATCH = {
     "html": lambda r: r.html or "",
     "cleaned_html": lambda r: r.cleaned_html or r.html or "",
-    "text": lambda r: re.sub(  # AUDIT: L-02 — fragile markdown-to-text regex; fails on nested formatting, code blocks, tables
-        r"[#*_`]|!?\[([^\]]*)\]\([^)]*\)", r"\1", _extract_markdown(r)
-    ).strip(),
+    "text": lambda r: (
+        re.sub(  # AUDIT: L-02 — fragile markdown-to-text regex; fails on nested formatting, code blocks, tables
+            r"[#*_`]|!?\[([^\]]*)\]\([^)]*\)", r"\1", _extract_markdown(r)
+        ).strip()
+    ),
 }
 
 
@@ -1996,6 +2160,98 @@ def _build_run_config(
     )
 
 
+def _apply_capture_flags(config: CrawlerRunConfig, capture_artifacts: list[str]) -> None:
+    """Turn on only the crawl4ai capture flags the caller requested."""
+    for artifact_type in capture_artifacts:
+        field_name = _CAPTURE_FLAG_FIELDS.get(artifact_type)
+        if field_name is not None:
+            setattr(config, field_name, True)
+
+
+def _apply_viewport(
+    crawler: Any,
+    config: CrawlerRunConfig,
+    viewport_width: int | None,
+    viewport_height: int | None,
+) -> None:
+    """Apply viewport to the shared browser config and the run signature."""
+    if viewport_width is None and viewport_height is None:
+        return
+    browser_config = getattr(crawler, "browser_config", None)
+    if browser_config is not None:
+        if viewport_width is not None:
+            browser_config.viewport_width = viewport_width
+        if viewport_height is not None:
+            browser_config.viewport_height = viewport_height
+    shared = dict(getattr(config, "shared_data", None) or {})
+    if viewport_width is not None:
+        shared["viewport_width"] = viewport_width
+    if viewport_height is not None:
+        shared["viewport_height"] = viewport_height
+    config.shared_data = shared
+
+
+async def _call_with_retries(
+    operation: Any,
+    *,
+    max_retries: int | None,
+    retry_backoff_ms: int | None,
+) -> Any:
+    """Call *operation* until it succeeds or the retry budget is spent."""
+    attempts = 1 if max_retries is None else max_retries + 1
+    delay_seconds = 0.0 if retry_backoff_ms is None else retry_backoff_ms / 1000
+    result: Any = None
+    for attempt in range(attempts):
+        result = await operation()
+        if bool(getattr(result, "success", False)) or attempt + 1 == attempts:
+            return result
+        if delay_seconds:
+            await asyncio.sleep(delay_seconds)
+    return result
+
+
+async def _arun_many_with_retries(
+    crawler: Any,
+    urls: list[str],
+    config: CrawlerRunConfig,
+    dispatcher: Any,
+    *,
+    max_retries: int | None,
+    retry_backoff_ms: int | None,
+) -> list[Any]:
+    """Fetch *urls* and retry only the failures, preserving input order."""
+    attempts = 1 if max_retries is None else max_retries + 1
+    delay_seconds = 0.0 if retry_backoff_ms is None else retry_backoff_ms / 1000
+    pending = list(enumerate(urls))
+    output: list[Any] = [None] * len(urls)
+    for attempt in range(attempts):
+        if not pending:
+            break
+        batch_urls = [url for _, url in pending]
+        batch_results = list(
+            await crawler.arun_many(urls=batch_urls, config=config, dispatcher=dispatcher)
+        )
+        next_pending: list[tuple[int, str]] = []
+        for slot, (index, url) in enumerate(pending):
+            result = batch_results[slot] if slot < len(batch_results) else None
+            output[index] = result
+            if not bool(getattr(result, "success", False)) and attempt + 1 < attempts:
+                next_pending.append((index, url))
+        pending = next_pending
+        if pending and delay_seconds:
+            await asyncio.sleep(delay_seconds)
+    return output
+
+
+def _read_result_depth(result: Any) -> int:
+    """Read the depth crawl4ai stores on result metadata."""
+    metadata = getattr(result, "metadata", None)
+    depth_value = metadata.get("depth") if isinstance(metadata, dict) else None
+    if isinstance(depth_value, int) and not isinstance(depth_value, bool) and depth_value >= 0:
+        return depth_value
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # Tool 1 — scrape
 # ---------------------------------------------------------------------------
@@ -2117,7 +2373,9 @@ async def scrape(
     output_format = conversion_options.output_format or "markdown"
 
     crawler = _get_crawler(ctx)
-    assert ctx is not None  # AUDIT: M-01 — bare assert stripped under -O; replace with if/raise ToolError
+    assert (
+        ctx is not None
+    )  # AUDIT: M-01 — bare assert stripped under -O; replace with if/raise ToolError
     await ctx.info(f"Scraping {len(normalized_targets)} target(s)")
     normalized_session_id = await _bind_session_id(
         session_id=session_options.session_id,
@@ -2126,7 +2384,9 @@ async def scrape(
         session_ttl_seconds=session_options.session_ttl_seconds,
         session_max_uses=session_options.session_max_uses,
     )
-    if normalized_capture_artifacts and normalized_session_id is None:  # AUDIT: L-06 — duplicate check; already validated in _normalize_canonical_option_groups
+    if (
+        normalized_capture_artifacts and normalized_session_id is None
+    ):  # AUDIT: L-06 — duplicate check; already validated in _normalize_canonical_option_groups
         raise ToolError(
             "Invalid options.conversion.capture_artifacts: requires options.session.session_id."
         )
@@ -2137,11 +2397,9 @@ async def scrape(
         retry_backoff_ms=runtime_options.retry_backoff_ms,
         max_content_chars=runtime_options.max_content_chars,
     )
-    if render_options.viewport_width is not None:
-        runtime_controls["viewport_width"] = render_options.viewport_width
-    if render_options.viewport_height is not None:
-        runtime_controls["viewport_height"] = render_options.viewport_height
-
+    page_timeout = runtime_controls.get("timeout_ms")
+    max_retries = runtime_controls.get("max_retries")
+    retry_backoff_ms = runtime_controls.get("retry_backoff_ms")
     config = _build_run_config(
         css_selector=extraction_options.css_selector,
         word_count_threshold=(
@@ -2156,32 +2414,37 @@ async def scrape(
         js_code=(
             [transformation_options.js_code] if transformation_options.js_code is not None else None
         ),
+        **({"page_timeout": page_timeout} if page_timeout is not None else {}),
     )
-    if render_options.viewport_width is not None:
-        config.viewport_width = render_options.viewport_width
-    if render_options.viewport_height is not None:
-        config.viewport_height = render_options.viewport_height
+    _apply_capture_flags(config, normalized_capture_artifacts)
+    _apply_viewport(
+        crawler,
+        config,
+        render_options.viewport_width,
+        render_options.viewport_height,
+    )
 
     dispatch_summary: dict[str, int | bool] | None = None
     if len(normalized_targets) == 1:
         results: list[Any] = [
-            await crawler.arun(
-                url=normalized_targets[0],
-                config=config,
-                **runtime_controls,  # ty: ignore[invalid-argument-type]
+            await _call_with_retries(
+                lambda: crawler.arun(url=normalized_targets[0], config=config),
+                max_retries=max_retries if isinstance(max_retries, int) else None,
+                retry_backoff_ms=retry_backoff_ms if isinstance(retry_backoff_ms, int) else None,
             )
         ]
     else:
         dispatcher = _build_crawl_many_dispatcher(batch_size=len(normalized_targets))
         if include_diagnostics:
             dispatch_summary = _build_dispatch_summary(dispatcher)
-        arun_many_results = await crawler.arun_many(
-            urls=normalized_targets,
-            config=config,
-            dispatcher=dispatcher,
-            **runtime_controls,
+        results = await _arun_many_with_retries(
+            crawler,
+            normalized_targets,
+            config,
+            dispatcher,
+            max_retries=max_retries if isinstance(max_retries, int) else None,
+            retry_backoff_ms=retry_backoff_ms if isinstance(retry_backoff_ms, int) else None,
         )
-        results = list(cast(Any, arun_many_results))
 
     items: list[dict[str, Any]] = []
     warnings: list[str] = []
@@ -2194,6 +2457,9 @@ async def scrape(
             "url": result_url,
             "ok": bool(getattr(result, "success", False)),
         }
+        if item["ok"] and not _result_url_allowed(result_url):
+            item["ok"] = False
+            item["error"] = "Result URL failed the public-address check."
 
         if item["ok"]:
             if extraction_schema is not None:
@@ -2276,7 +2542,9 @@ async def scrape(
             }
         ),
     }
-    return _truncate(json.dumps(envelope, indent=2))  # AUDIT: H-01 — truncating serialized JSON produces invalid JSON
+    return _truncate(
+        json.dumps(envelope, indent=2)
+    )  # AUDIT: H-01 — truncating serialized JSON produces invalid JSON
 
 
 # ---------------------------------------------------------------------------
@@ -2395,7 +2663,9 @@ async def crawl(
     output_format = conversion_options.output_format or "markdown"
 
     crawler = _get_crawler(ctx)
-    assert ctx is not None  # AUDIT: M-01 — bare assert stripped under -O; replace with if/raise ToolError
+    assert (
+        ctx is not None
+    )  # AUDIT: M-01 — bare assert stripped under -O; replace with if/raise ToolError
     await ctx.info(f"Crawling {len(normalized_targets)} target(s) in {traversal_mode} mode")
     normalized_session_id = await _bind_session_id(
         session_id=session_options.session_id,
@@ -2404,7 +2674,9 @@ async def crawl(
         session_ttl_seconds=session_options.session_ttl_seconds,
         session_max_uses=session_options.session_max_uses,
     )
-    if normalized_capture_artifacts and normalized_session_id is None:  # AUDIT: L-06 — duplicate check; already validated in _normalize_canonical_option_groups
+    if (
+        normalized_capture_artifacts and normalized_session_id is None
+    ):  # AUDIT: L-06 — duplicate check; already validated in _normalize_canonical_option_groups
         raise ToolError(
             "Invalid options.conversion.capture_artifacts: requires options.session.session_id."
         )
@@ -2415,10 +2687,10 @@ async def crawl(
         retry_backoff_ms=runtime_options.retry_backoff_ms,
         max_content_chars=runtime_options.max_content_chars,
     )
-    if render_options.viewport_width is not None:
-        runtime_controls["viewport_width"] = render_options.viewport_width
-    if render_options.viewport_height is not None:
-        runtime_controls["viewport_height"] = render_options.viewport_height
+    page_timeout = runtime_controls.get("timeout_ms")
+    max_retries = runtime_controls.get("max_retries")
+    retry_backoff_ms = runtime_controls.get("retry_backoff_ms")
+    page_timeout_extra = {"page_timeout": page_timeout} if page_timeout is not None else {}
 
     word_count_threshold = (
         extraction_options.word_count_threshold
@@ -2437,11 +2709,15 @@ async def crawl(
         session_id=normalized_session_id,
         extraction_strategy=extraction_strategy,
         js_code=js_code,
+        **page_timeout_extra,
     )
-    if render_options.viewport_width is not None:
-        config.viewport_width = render_options.viewport_width
-    if render_options.viewport_height is not None:
-        config.viewport_height = render_options.viewport_height
+    _apply_capture_flags(config, normalized_capture_artifacts)
+    _apply_viewport(
+        crawler,
+        config,
+        render_options.viewport_width,
+        render_options.viewport_height,
+    )
 
     dispatch_summary: dict[str, int | bool] | None = None
     results: list[Any]
@@ -2456,13 +2732,14 @@ async def crawl(
         )
         if include_diagnostics:
             dispatch_summary = _build_dispatch_summary(dispatcher)
-        arun_many_results = await crawler.arun_many(
-            urls=normalized_targets,
-            config=config,
-            dispatcher=dispatcher,
-            **runtime_controls,
+        results = await _arun_many_with_retries(
+            crawler,
+            normalized_targets,
+            config,
+            dispatcher,
+            max_retries=max_retries if isinstance(max_retries, int) else None,
+            retry_backoff_ms=retry_backoff_ms if isinstance(retry_backoff_ms, int) else None,
         )
-        results = list(cast(Any, arun_many_results))
         requested_targets = normalized_targets
     else:
         deep_config = _build_run_config(
@@ -2473,6 +2750,7 @@ async def crawl(
             session_id=normalized_session_id,
             extraction_strategy=extraction_strategy,
             js_code=js_code,
+            **page_timeout_extra,
             deep_crawl_strategy=_build_deep_crawl_strategy(
                 crawl_mode=traversal_options.crawl_mode or "bfs",
                 max_depth=traversal_options.max_depth or 2,
@@ -2482,15 +2760,17 @@ async def crawl(
             ),
             verbose=False,
         )
-        if render_options.viewport_width is not None:
-            deep_config.viewport_width = render_options.viewport_width
-        if render_options.viewport_height is not None:
-            deep_config.viewport_height = render_options.viewport_height
+        _apply_capture_flags(deep_config, normalized_capture_artifacts)
+        _apply_viewport(
+            crawler,
+            deep_config,
+            render_options.viewport_width,
+            render_options.viewport_height,
+        )
 
-        deep_results: Any = await crawler.arun(  # AUDIT: H-03 — discovered URLs during deep crawl bypass _validate_url SSRF checks
+        deep_results: Any = await crawler.arun(
             url=normalized_targets[0],
             config=deep_config,
-            **runtime_controls,  # ty: ignore[invalid-argument-type]
         )
         results = (
             list(cast(Any, deep_results)) if isinstance(deep_results, list) else [deep_results]
@@ -2509,14 +2789,10 @@ async def crawl(
             "ok": bool(getattr(result, "success", False)),
         }
         if traversal_mode == "deep":
-            result_depth = getattr(result, "depth", None)
-            item["depth"] = (
-                result_depth
-                if isinstance(result_depth, int)
-                and not isinstance(result_depth, bool)
-                and result_depth >= 0
-                else 0
-            )
+            item["depth"] = _read_result_depth(result)
+        if item["ok"] and not _result_url_allowed(result_url):
+            item["ok"] = False
+            item["error"] = "Result URL failed the public-address check."
 
         if item["ok"]:
             truncate_limit = (
@@ -2574,7 +2850,9 @@ async def crawl(
         "schema_version": SCRAPE_CRAWL_CONTRACT_SCHEMA_VERSION,
         "tool": "crawl",
         "ok": ok,
-        "data": items[0] if len(items) == 1 else None,  # AUDIT: L-05 — deep crawl single-result returns data instead of items array
+        "data": items[0]
+        if len(items) == 1
+        else None,  # AUDIT: L-05 — deep crawl single-result returns data instead of items array
         "items": items if len(items) > 1 else None,
         "meta": {
             "target_count": len(normalized_targets),
@@ -2595,7 +2873,9 @@ async def crawl(
             }
         ),
     }
-    return _truncate(json.dumps(envelope, indent=2))  # AUDIT: H-01 — truncating serialized JSON produces invalid JSON
+    return _truncate(
+        json.dumps(envelope, indent=2)
+    )  # AUDIT: H-01 — truncating serialized JSON produces invalid JSON
 
 
 # ---------------------------------------------------------------------------
@@ -3126,6 +3406,13 @@ def _validate_deep_crawl_url_filter_patterns(  # AUDIT: M-03 — no upper bound 
     return validated_patterns
 
 
+class _PublicAddressFilter(URLFilter):
+    """Reject discovered URLs that fail the public-address check."""
+
+    def apply(self, url: str) -> bool:
+        return _result_url_allowed(url)
+
+
 def _build_deep_crawl_strategy(
     *,
     crawl_mode: str,
@@ -3175,31 +3462,22 @@ def _build_deep_crawl_strategy(
                 param_name="url_filters.exclude",
             )
 
-    filter_chain: FilterChain | None = None
+    filters: list[URLFilter] = [_PublicAddressFilter()]
     if include_patterns or exclude_patterns:
         try:
-            filter_chain = FilterChain(
-                filters=[
-                    *([URLPatternFilter(cast(Any, include_patterns))] if include_patterns else []),
-                    *(
-                        [URLPatternFilter(cast(Any, exclude_patterns), reverse=True)]
-                        if exclude_patterns
-                        else []
-                    ),
-                ]
-            )
+            if include_patterns:
+                filters.append(URLPatternFilter(cast(Any, include_patterns)))
+            if exclude_patterns:
+                filters.append(URLPatternFilter(cast(Any, exclude_patterns), reverse=True))
         except re.error as e:
             raise ToolError(f"Invalid url_filters pattern: {e}") from e
 
-    strategy_kwargs: dict[str, Any] = {
-        "max_depth": max_depth,
-        "max_pages": max_pages,
-        "include_external": include_external,
-    }
-    if filter_chain is not None:
-        strategy_kwargs["filter_chain"] = filter_chain
-
-    return strategy_cls(**strategy_kwargs)
+    return strategy_cls(
+        max_depth=max_depth,
+        max_pages=max_pages,
+        include_external=include_external,
+        filter_chain=FilterChain(filters=filters),
+    )
 
 
 # ---------------------------------------------------------------------------
