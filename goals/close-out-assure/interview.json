@@ -1,0 +1,117 @@
+{
+  "stage": "interview",
+  "title": "Close out mcp-crawl4ai and prove it works",
+  "goalSlug": "close-out-assure",
+  "questions": [
+    {
+      "id": "scope",
+      "prompt": "What should this close-out change?",
+      "description": "The audit already found the failures. This chooses the bundle of work. The recommendation is everything required for the documented path to start, the suite to pass, and the live tools to do what they claim, including the private-address check. Publishing to PyPI, merging Dependabot, and deleting the unused legacy functions stay out unless you add them.",
+      "answerMode": "multi-custom",
+      "recommendedAnswer": "Startup, CI, live-tool behavior, SSRF fail-closed, HTTP bind, and the false instructions.",
+      "recommendedOptionIds": ["startup", "ci", "contracts", "ssrf", "http", "docs"],
+      "options": [
+        {
+          "id": "startup",
+          "label": "Make the pinned interpreter start the server, and document uv run"
+        },
+        {
+          "id": "ci",
+          "label": "Make pytest and ruff format pass on main"
+        },
+        {
+          "id": "contracts",
+          "label": "Fix truncation, capture flags, timeouts and viewport, and crawl depth"
+        },
+        {
+          "id": "ssrf",
+          "label": "Fail closed on DNS errors, re-check discovered URLs, and reject host-parser confusion"
+        },
+        {
+          "id": "http",
+          "label": "Stop publishing unauthenticated HTTP on 0.0.0.0 by default"
+        },
+        {
+          "id": "docs",
+          "label": "Correct the instructions that are currently false (tool count, dependencies, PATH, Python, /mcp)"
+        },
+        {
+          "id": "release",
+          "label": "Bump the version past the pre-rename 0.3.1 wheel, without publishing"
+        },
+        {
+          "id": "dependabot",
+          "label": "Merge the five open Dependabot action bumps"
+        },
+        {
+          "id": "legacy",
+          "label": "Delete the unregistered legacy tool functions"
+        }
+      ],
+      "required": true
+    },
+    {
+      "id": "python",
+      "prompt": "Which Python should the documented start path use?",
+      "description": ".python-version is 3.14, and locked httpcore 1.0.7 crashes on import there during FastMCP startup. The same lock imports on 3.13, which is what the Docker image uses. A later plain uv sync follows .python-version and returns to 3.14.",
+      "answerMode": "single-custom",
+      "recommendedAnswer": "Pin the project, CI, and Docker to Python 3.13 so the documented command matches the interpreter that actually starts.",
+      "recommendedOptionIds": ["pin-313"],
+      "options": [
+        {
+          "id": "pin-313",
+          "label": "Pin .python-version, CI, ty, and Docker to 3.13"
+        },
+        {
+          "id": "fix-314",
+          "label": "Keep 3.14 and upgrade the locked HTTP stack so startup works there"
+        },
+        {
+          "id": "matrix",
+          "label": "Support both 3.13 and 3.14, and make CI test both"
+        }
+      ],
+      "required": true
+    },
+    {
+      "id": "http",
+      "prompt": "What should the HTTP server do when it is not on loopback?",
+      "description": "The CLI already defaults to 127.0.0.1 and prints a warning for other hosts. The Docker command binds 0.0.0.0 with no authentication. One browser and caller-chosen session ids are shared by every client.",
+      "answerMode": "single-custom",
+      "recommendedAnswer": "Keep the CLI on loopback. Change the image default to loopback and require an explicit host override. Do not add a new auth system in this pass.",
+      "recommendedOptionIds": ["loopback"],
+      "options": [
+        {
+          "id": "loopback",
+          "label": "Loopback by default, including Docker, with an explicit host override"
+        },
+        {
+          "id": "bearer",
+          "label": "Require a bearer token before any HTTP tool call"
+        },
+        {
+          "id": "warn",
+          "label": "Leave 0.0.0.0 in Docker and keep the stderr warning"
+        }
+      ],
+      "required": true
+    },
+    {
+      "id": "assurance",
+      "prompt": "What has to be true before this close-out is done?",
+      "description": "Unit tests do not launch Chromium. A live crawl needs a browser and network. The recommendation proves the process starts and the suite is green, and leaves a real page fetch as a manual check.",
+      "answerMode": "multi-custom",
+      "recommendedAnswer": "Green pytest, green ruff format and ruff check, ty check, and the server process stays up on the chosen Python for stdio and for HTTP on 127.0.0.1:8000/mcp.",
+      "recommendedOptionIds": ["pytest", "ruff", "ty", "stdio", "http"],
+      "options": [
+        { "id": "pytest", "label": "uv run pytest is green, including a valid JSON envelope after truncation" },
+        { "id": "ruff", "label": "ruff check and ruff format --check pass" },
+        { "id": "ty", "label": "ty check passes" },
+        { "id": "stdio", "label": "The server stays up on stdio on the chosen Python" },
+        { "id": "http", "label": "HTTP listens on 127.0.0.1:8000/mcp" },
+        { "id": "live", "label": "One live Chromium fetch of a public page succeeds" }
+      ],
+      "required": true
+    }
+  ]
+}
